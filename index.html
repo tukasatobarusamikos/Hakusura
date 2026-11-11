@@ -477,8 +477,15 @@ function load(){
     S.potions=d.potions||0; S.sp=d.sp||0;
     S.region=d.region||1; S.deepestRegion=d.deepestRegion||S.region;
     S.sk=Object.assign({atk:0,hp:0,spd:0,crit:0,critd:0,gold:0,heal:0,combo:0,fire:0,execute:0,goushin:0},d.sk||{});
-    S.mainSkill=d.mainSkill||'goushin';
-    if(!d.mainSkill) S.sk.goushin=0; // pre-swap saves: force re-unlock
+    S.mainSkill='goushin';
+    // migrate old multi-main saves: count unlocked mains as tier progress
+    if(d.sk&&d.sk.goushin===undefined){ /* fresh */ }
+    if(d.mainSkill&&d.mainSkill!=='goushin'){
+      const order=['goushin','vamp','bolt','barrage'];
+      const idx=order.indexOf(d.mainSkill);
+      const lvs=[d.sk&&d.sk.goushin,d.sk&&d.sk.vamp,d.sk&&d.sk.bolt,d.sk&&d.sk.barrage].filter(x=>x&&x>0).length;
+      S.sk.goushin=Math.max(S.sk.goushin||0,(idx>=0?idx+1:lvs)||1);
+    }
     return d;
   }catch(e){ return null; }
 }
@@ -1031,18 +1038,41 @@ const SKS=[
   {id:'fire',n:'滅びの炎',d:'第二の技を解放：(5+Lv)倍ダメージ+灼熱の追加炎ダメージ、CT8秒（8 SP / Lv）',max:5,base:8,active:true},
   {id:'execute',n:'影討ち',d:'敵を倒した後の次の一撃が確定クリティカル。Lv毎にその倍率+30%（6 SP / Lv）',max:5,base:6,active:true},
 ];
-const MAINS=[
-  {id:'goushin',n:'渾身の一撃',d:'12倍ダメージ+確定クリティカル、CT15秒（3 SP）',max:1,base:3},
-  {id:'vamp',n:'吸血の太刀',d:'8倍ダメージ、与えたダメージの40%を吸収して回復、CT15秒（10 SP）',max:1,base:10},
-  {id:'bolt',n:'天雷の一閃',d:'15倍ダメージ+落雷が落ちる、CT15秒（14 SP）',max:1,base:14},
-  {id:'barrage',n:'乱れ桜',d:'3.5倍ダメージの4連撃、CT15秒（12 SP）',max:1,base:12},
+/* main skill: one button, 10 tiers — name & power evolve */
+const MAIN_TIERS=[
+  {n:'渾身の一撃',d:'12倍ダメージ+確定クリティカル'},
+  {n:'烈震の一滴',d:'14倍ダメージ+確定クリティカル'},
+  {n:'吸血の太刀',d:'12倍ダメージ+確クリ+与ダメ25%を吸収'},
+  {n:'紅蓮の太刀',d:'14倍ダメージ+確クリ+与ダメ35%を吸収+灼熱'},
+  {n:'天雷の一閃',d:'18倍ダメージ+確定クリティカル+落雷'},
+  {n:'紫電の奔流',d:'22倍ダメージ+確定クリティカル+落雷'},
+  {n:'乱れ桜',d:'4倍×4連撃+確定クリティカル'},
+  {n:'千早振る',d:'5倍×5連撃+確定クリティカル'},
+  {n:'暁の太刀',d:'28倍ダメージ+確クリ+与ダメ40%吸収+灼熱'},
+  {n:'終焉の一刀',d:'40倍ダメージ+確クリ+全効果発動'},
 ];
+const MAIN_MAX=10;
+function mainTier(){ return MAIN_TIERS[(S.sk.goushin||1)-1]||MAIN_TIERS[0]; }
+function mainCost(lv){ return lv===0?3:Math.ceil(4*Math.pow(1.45,lv-1)); }  // 3,4,6,9,13,19,27,40,58,84
+function mainDesc(lv){
+  if(lv>=MAIN_MAX) return '<b style="color:var(--gold)">'+MAIN_TIERS[MAIN_MAX-1].n+'</b>： '+MAIN_TIERS[MAIN_MAX-1].d+'（最大段階）';
+  return '<b style="color:var(--gold)">'+MAIN_TIERS[lv-1].n+'</b>： '+MAIN_TIERS[lv-1].d+'<br>▼ 次段「'+MAIN_TIERS[lv].n+'」： '+MAIN_TIERS[lv].d;
+}
 function buySk(n){
   const l=S.sk[n.id]||0;
   if(l>=n.max||S.sp<n.base) return;
   S.sp-=n.base; S.sk[n.id]=l+1;
   log((n.max>1?n.n+' Lv'+(l+1):n.n)+' を習得した','gold');
   sfx.level(); dirty.equip=true; renderTab();
+}
+function buyMain(){
+  const l=S.sk.goushin||0;
+  if(l>=MAIN_MAX) return;
+  const cost=mainCost(l);
+  if(S.sp<cost) return;
+  S.sp-=cost; S.sk.goushin=l+1;
+  log('必殺技が「'+mainTier().n+'」に進化した（段階'+(l+1)+'）','legend');
+  sfx.level(); renderTab(); save();
 }
 function skTotal(){ let t=0; for(const k in S.sk) t+=S.sk[k]||0; return t; }
 function respecCost(){ return Math.ceil(100*Math.pow(1.35,skTotal())); }
@@ -1641,8 +1671,8 @@ function drawMob(t){
   ctx.drawImage(mCv,-120*sc,-232*sc,240*sc,240*sc);
   ctx.restore();
   if(alpha<=0.02) return;
-  // name + hp bar (follows the motion)
-  const bw=mob.boss?220:130, bx=mx-bw/2, by=my-(mob.boss?250:215)*sc;
+  // name + hp bar (follows the motion, clamped to canvas)
+  const bw=mob.boss?220:130, bx=clamp(mx-bw/2,4,W-bw-4), by=clamp(my-(mob.boss?250:215)*sc,44,H-30);
   ctx.save(); ctx.globalAlpha=alpha;
   ctx.font=(mob.boss?'16px':'13px')+' DotGothic16, sans-serif';
   ctx.textAlign='center';
@@ -1843,14 +1873,15 @@ function renderTab(){
         +'<div class="uEff">'+n.d+'</div>'
         +btn+'</div>';
     }
-    h+='<div class="secTitle">必殺技（装着）</div>';
-    for(const n of MAINS){
-      const l=S.sk[n.id]||0, cur=(S.mainSkill||'goushin')===n.id;
-      h+='<div class="skNode'+(l?'':' locked')+'"><div class="uHead"><span class="uName act">'+n.n+'</span><span class="uLv">'+(cur?'装着中':(l?'解放済':'未解放'))+'</span></div>'
-        +'<div class="uEff">'+n.d+'</div>'
-        +(l
-          ?'<button class="buyBtn skBuy '+(cur?'skDone':'skUnlock')+' setMain" data-id="'+n.id+'" '+(cur?'disabled':'')+'>'+(cur?'✔ 装着中':'装着する')+'</button>'
-          :'<button class="buyBtn skBuy skUnlock" data-id="'+n.id+'" '+((S.sp<n.base)?'disabled':'')+'>解放する<span class="c">'+n.base+' SP</span></button>')
+    h+='<div class="secTitle">必殺技（段階強化）</div>';
+    {
+      const l=S.sk.goushin||0, maxed=l>=MAIN_MAX;
+      const cost=mainCost(l);
+      h+='<div class="skNode'+(l?'':' locked')+'"><div class="uHead"><span class="uName act">'+(l?mainTier().n:'未解放')+'</span><span class="uLv">'+(maxed?'最大段階':'段階 '+l+' / '+MAIN_MAX)+'</span></div>'
+        +'<div class="uEff">'+(l?mainDesc(l):'一撃必殺の技。解放すると戦闘の必殺技ボタンが使えるようになる。')+'</div>'
+        +(maxed
+          ?'<button class="buyBtn skBuy skDone" disabled>✔ 最終段階</button>'
+          :'<button class="buyBtn skBuy skUnlock" data-id="goushin" '+((S.sp<cost)?'disabled':'')+'>'+(l?'次段階へ「'+MAIN_TIERS[l].n+'」<span class="c">'+cost+' SP</span>':'解放する<span class="c">'+cost+' SP</span>')+'</button>')
         +'</div>';
     }
     const tot=skTotal(), rCost=respecCost();
@@ -1858,11 +1889,12 @@ function renderTab(){
       +'<p style="font-size:11px;color:var(--ink-faint);margin-bottom:8px">全スキルをリセットして SP を返却する。費用は投資中の SP が多いほど高くなる（現在 '+tot+' SP 投資）。</p>'
       +'<button class="dangerBtn" id="respecBtn" '+((tot&&S.gold>=rCost)?'':'disabled')+'>'+(tot?'振り直し（'+fmt(rCost)+'G）':'振り直すスキルがない')+'</button>';
     tabContent.innerHTML=h;
-    tabContent.querySelectorAll('.skBuy').forEach(b=>b.addEventListener('click',()=>buySk(SKS.concat(MAINS).find(x=>x.id===b.dataset.id))));
-    tabContent.querySelectorAll('.setMain').forEach(b=>b.addEventListener('click',()=>{
-      const n=MAINS.find(x=>x.id===b.dataset.id);
-      if(n&&(S.sk[n.id]||0)>0){ S.mainSkill=n.id; log('必殺技を「'+n.n+'」に変更した','gold'); sfx.coin(); renderTab(); save(); }
-    }));
+    tabContent.querySelectorAll('.skBuy').forEach(b=>{
+      b.addEventListener('click',()=>{
+        if(b.dataset.id==='goushin') buyMain();
+        else buySk(SKS.find(x=>x.id===b.dataset.id));
+      });
+    });
     const rs=$('#respecBtn'); if(rs) rs.addEventListener('click',respec);
   }else if(curTab==='up'){
     let h='<div class="buySel">購入単位：'
@@ -1985,7 +2017,7 @@ function buildDots(){
 let skNotified=false;
 function canUnlockAny(){
   if(!(S.sp>0)) return false;
-  return SKS.concat(MAINS.filter(m=>m.base>0)).some(n=>(S.sk[n.id]||0)<n.max&&S.sp>=n.base);
+  return SKS.some(n=>(S.sk[n.id]||0)<n.max&&S.sp>=n.base)||(S.sk.goushin||0)<MAIN_MAX&&S.sp>=mainCost(S.sk.goushin||0);
 }
 function showSkToast(msg){
   const t=els.skToast; if(!t) return;
@@ -2022,7 +2054,7 @@ function hud(){
   // skill
   const cd=S.skillCd||0;
   els.skillCdEl.style.transform='scaleX('+(cd/15)+')';
-  const mn=MAINS.find(m=>m.id===(S.mainSkill||'goushin'));
+  const mn={n:(S.sk.goushin||0)?mainTier().n:'必殺技'};
   // skill unlockable notification (rising edge only)
   const can=canUnlockAny();
   els.skTab.classList.toggle('canUnlock',can&&!skNotified);
@@ -2082,36 +2114,49 @@ els.fire.addEventListener('click',()=>castFire());
 els.pot.addEventListener('click',()=>drinkPotion(false));
 function castSkill(){
   if((S.skillCd||0)>0||!mob||mob.dying>0) return;
-  if(!(S.sk[S.mainSkill||'goushin']||0)) return;
+  if(!(S.sk.goushin||0)) return;
   S.skillCd=15;
   sfx.skill(); shake=Math.max(shake,12);
   ringFx(0.72,0.6,'#ffd166');
-  const main=S.mainSkill||'goushin';
-  if(main==='vamp'){
+  const t=(S.sk.goushin||1);
+  const heals=p=>{
+    if(hero.dead) return;
+    const healed=Math.round(Math.max(0,p)*1);
+    if(healed>0){ hero.hp=Math.min(maxHp(),hero.hp+healed); fx.push({k:'t',str:'+'+fmt(healed),col:'#6fd08a',x:0.26,y:0.4,v:0.07,life:1}); log(mainTier().n+'が生命を吸った（+'+fmt(healed)+'）','heal'); }
+  };
+  if(t<=2){ // 渾身 / 烈震
+    fx.push({k:'f',life:1}); fx.push({k:'v',life:1});
+    fx.push({k:'s',x:0.72,y:0.55,a:-0.55,life:1}); fx.push({k:'s',x:0.72,y:0.55,a:0.55,life:1});
+    swing(t===1?12:14,true);
+  }else if(t<=4){ // 吸血 / 紅蓮
     const before=mob.hp;
     fx.push({k:'f',life:1});
     fx.push({k:'s',x:0.72,y:0.55,a:-0.7,life:1});
-    swing(8,false);
-    if(!hero.dead){
-      const healed=Math.round(Math.max(0,before-(mob?mob.hp:0))*0.4);
-      if(healed>0){ hero.hp=Math.min(maxHp(),hero.hp+healed); fx.push({k:'t',str:'+'+fmt(healed),col:'#6fd08a',x:0.26,y:0.4,v:0.07,life:1}); log('吸血の太刀が生命を吸った（+'+fmt(healed)+'）','heal'); }
-    }
-  }else if(main==='bolt'){
-    fx.push({k:'v',life:1});
-    fx.push({k:'f',life:0.8});
-    swing(15,true);
-  }else if(main==='barrage'){
-    for(let i=0;i<4;i++){
+    swing(t===3?12:14,true);
+    if(mob&&mob.hp>0) heals(Math.max(0,before-mob.hp)*(t===3?0.25:0.35));
+    if(t===4&&mob&&mob.hp>0){ mob.burn={dps:atkVal()*0.8,t:3,acc:0}; log('紅蓮の炎が燃え移る！','warn'); }
+  }else if(t<=6){ // 天雷 / 紫電
+    fx.push({k:'v',life:1}); fx.push({k:'f',life:0.8});
+    swing(t===5?18:22,true);
+  }else if(t<=8){ // 乱れ桜 / 千早
+    const hits=t===7?4:5, mul=t===7?4:5;
+    for(let i=0;i<hits;i++){
       fx.push({k:'s',x:0.72,y:0.55,a:rand(-1.0,1.0),life:1});
       if(!mob||mob.dying>0) break;
-      swing(3.5,i===0);
+      swing(mul,true);
     }
-  }else{
-    fx.push({k:'f',life:1});
-    fx.push({k:'v',life:1});
-    fx.push({k:'s',x:0.72,y:0.55,a:-0.55,life:1});
-    fx.push({k:'s',x:0.72,y:0.55,a:0.55,life:1});
-    swing(12,true);
+  }else if(t===9){ // 暁
+    const before=mob.hp;
+    fx.push({k:'v',life:1}); fx.push({k:'f',life:1});
+    fx.push({k:'s',x:0.72,y:0.55,a:-0.7,life:1}); fx.push({k:'s',x:0.72,y:0.55,a:0.7,life:1});
+    swing(28,true);
+    if(mob&&mob.hp>0){ heals(Math.max(0,before-mob.hp)*0.4); mob.burn={dps:atkVal()*0.8,t:3,acc:0}; }
+  }else{ // 終焉の一刀
+    fx.push({k:'v',life:1}); fx.push({k:'f',life:1}); fx.push({k:'f',life:0.7});
+    fx.push({k:'s',x:0.72,y:0.55,a:-0.55,life:1}); fx.push({k:'s',x:0.72,y:0.55,a:0.55,life:1});
+    fx.push({k:'s',x:0.72,y:0.55,a:rand(-1,1),life:1});
+    swing(40,true);
+    if(mob&&mob.hp>0){ mob.burn={dps:atkVal()*1.2,t:4,acc:0}; }
   }
 }
 function castFire(){
