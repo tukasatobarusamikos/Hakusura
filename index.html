@@ -588,7 +588,7 @@ function killMob(){
   S.gold+=g; S.totalGold+=g; gainGps(g);
   S.totalKills++;
   coinFx(m.boss?26:ri(5,9));
-  sfx.die();
+  sfx.coin(); sfx.die();
   gainXp(Math.ceil(m.max*0.4));
   if(dropC()>Math.random()) dropItem();
   if(Math.random()<0.06){
@@ -723,6 +723,7 @@ function coinFx(n){ for(let i=0;i<n;i++) fx.push({k:'c',x:0.72+rand(-0.04,0.04),
 function sparkFx(n){ for(let i=0;i<n;i++) fx.push({k:'p',x:0.72+rand(-0.06,0.06),y:0.6+rand(-0.1,0),vx:rand(-0.2,0.2),vy:rand(-0.3,-0.02),c:Math.random()<0.4?'#ffffff':(Math.random()<0.5?'#ffd166':'#ff9d3d'),life:1}); }
 function ringFx(x,y,c){ fx.push({k:'r',x,y,c,life:1}); }
 function tickFx(dt){
+  if(fx.length>140) fx.splice(0,fx.length-140);
   for(let i=fx.length-1;i>=0;i--){
     const f=fx[i];
     if(f.k==='t'){ f.y-=f.v*dt*3; f.life-=dt*1.1; }
@@ -937,7 +938,13 @@ let heroImg=null, heroTintCv=null;
 (function(){
   if(typeof HERO_SPRITE!=='undefined'&&HERO_SPRITE){
     const hi=new Image();
-    hi.onload=function(){ heroImg=hi; heroTintCv=document.createElement('canvas'); heroTintCv.width=hi.width; heroTintCv.height=hi.height; };
+    hi.onload=function(){
+      heroImg=hi;
+      heroTintCv=document.createElement('canvas'); heroTintCv.width=hi.width; heroTintCv.height=hi.height;
+      const hc=heroTintCv.getContext('2d'); hc.drawImage(hi,0,0);
+      hc.globalCompositeOperation='source-atop'; hc.fillStyle='rgba(229,72,77,0.55)'; hc.fillRect(0,0,heroTintCv.width,heroTintCv.height);
+      hc.globalCompositeOperation='source-over';
+    };
     hi.src=HERO_SPRITE;
   }
 })();
@@ -970,7 +977,7 @@ function drawHero(t){
   }else{
     // motion afterimages
     if(pose){
-      for(const [off,al] of [[0.07,0.22],[0.14,0.11]]){
+      for(const [off,al] of [[0.09,0.25]]){
         const gp=heroPose((atkT-off)/0.33);
         if(gp&&gp.lunge>0){
           ctx.save(); ctx.globalAlpha=al;
@@ -983,15 +990,9 @@ function drawHero(t){
     ctx.translate(0,Math.sin(t*2.4)*2.5);
     if(pose){ ctx.translate(pose.lunge,0); ctx.rotate(-pose.lean); }
     if(hero&&hero.hurt>0&&heroTintCv){
-      const hc=heroTintCv.getContext('2d');
-      hc.setTransform(1,0,0,1,0,0);
-      hc.clearRect(0,0,heroTintCv.width,heroTintCv.height);
-      hc.drawImage(heroImg,0,0);
-      hc.globalCompositeOperation='source-atop';
-      hc.fillStyle='rgba(229,72,77,'+(hero.hurt*0.55)+')';
-      hc.fillRect(0,0,heroTintCv.width,heroTintCv.height);
-      hc.globalCompositeOperation='source-over';
+      ctx.globalAlpha=clamp(hero.hurt,0,1);
       ctx.drawImage(heroTintCv,-drawW/2,-drawH,drawW,drawH);
+      ctx.globalAlpha=1;
     }else{
       ctx.drawImage(heroImg,-drawW/2,-drawH,drawW,drawH);
     }
@@ -1262,7 +1263,7 @@ function drawFx(t){
       const prog=1-f.life;
       const cx=W*0.26+40, cy=H*0.55, R=H*0.62;
       const A=-1.35+prog*2.3;
-      for(const [wd,al,col] of [[24,0.22,'#ffe9b0'],[10,0.55,'#fff'],[3.5,1,'#fff']]){
+      for(const [wd,al,col] of [[14,0.35,'#ffe9b0'],[4.5,1,'#fff']]){
         ctx.globalAlpha=clamp(f.life,0,1)*al;
         ctx.strokeStyle=col; ctx.lineWidth=wd; ctx.lineCap='round';
         ctx.beginPath(); ctx.arc(cx,cy,R,A-1.05,A); ctx.stroke();
@@ -1296,7 +1297,6 @@ function drawFx(t){
       ctx.fillStyle='#ffd166'; ctx.beginPath(); ctx.arc(x,y,4,0,7); ctx.fill();
       ctx.fillStyle='#a8851e'; ctx.fillRect(x-3,y-1,6,1.5);
       ctx.globalAlpha=1;
-      if(Math.random()<0.03) sfx.coin();
     }else if(f.k==='p'){
       ctx.globalAlpha=clamp(f.life,0,1);
       ctx.fillStyle=f.c; ctx.fillRect(x-2,y-2,4,4);
