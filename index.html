@@ -1137,7 +1137,7 @@ function drawBg(t){
   ctx.fillText(B.name+'  ―  B'+S.floor+'F',16,28);
 }
 let atkImg=null;
-let heroImg=null, heroTintCv=null;
+let heroImg=null, heroTintCv=null, heroFrames=null;
 (function(){ const ai=new Image(); ai.onload=function(){ atkImg=ai; }; ai.src=HERO_ATK; })();
 (function(){
   if(typeof HERO_SPRITE!=='undefined'&&HERO_SPRITE){
@@ -1146,6 +1146,15 @@ let heroImg=null, heroTintCv=null;
       heroImg=hi;
       heroTintCv=document.createElement('canvas'); heroTintCv.width=hi.width; heroTintCv.height=hi.height;
       const hc=heroTintCv.getContext('2d'); hc.drawImage(hi,0,0);
+      // stepped dot-anim idle frames: 0=normal, 1=crouch, 2=stretch
+      heroFrames=[0,1,2].map(f=>{
+        const c=document.createElement('canvas'); c.width=hi.width; c.height=hi.height+6;
+        const g=c.getContext('2d'); g.imageSmoothingEnabled=false;
+        if(f===1){ g.translate(0,4); g.scale(1,0.97); }
+        if(f===2){ g.translate(0,-2); g.scale(1,1.03); }
+        g.drawImage(hi,0,0);
+        return c;
+      });
       hc.globalCompositeOperation='source-atop'; hc.fillStyle='rgba(229,72,77,0.55)'; hc.fillRect(0,0,heroTintCv.width,heroTintCv.height);
       hc.globalCompositeOperation='source-over';
     };
@@ -1191,14 +1200,21 @@ function drawHero(t){
         ctx.restore();
       }
     }
-    ctx.translate(0,Math.sin(t*2.4)*2.5);
+    // stepped dot-anim: 4-step cycle normal->crouch->normal->stretch at ~2.5fps
+    const fi=[0,1,0,2][Math.floor(t*2.5)%4];
+    const fr=heroFrames&&heroFrames[fi];
+    ctx.translate(0,[0,-2,0,-4][fi]);
     if(pose){ ctx.translate(pose.lunge*1.4,0); ctx.rotate(-pose.lean*0.5); }
     if(hero&&hero.hurt>0&&heroTintCv&&!useAtk){
       ctx.globalAlpha=clamp(hero.hurt,0,1);
       ctx.drawImage(heroTintCv,-drawW/2,-drawH,drawW,drawH);
       ctx.globalAlpha=1;
     }else{
-      ctx.drawImage(hi,-dw2/2,-dh2,dw2,dh2);
+      if(fr&&!useAtk){
+        const fh=fr.height/heroImg.height*drawH, fw=fr.width/fr.height*fh;
+        ctx.imageSmoothingEnabled=false;
+        ctx.drawImage(fr,-fw/2,-fh,fw,fh);
+      }else ctx.drawImage(hi,-dw2/2,-dh2,dw2,dh2);
     }
     if(pose&&atkT/0.33>=0.25&&atkT/0.33<0.6){
       ctx.globalAlpha=0.5;
