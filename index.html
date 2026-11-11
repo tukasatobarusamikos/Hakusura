@@ -387,6 +387,7 @@ body{
         <button data-tab="equip" class="on" type="button">装備</button>
         <button data-tab="up" type="button">強化</button>
         <button data-tab="sk" type="button">スキル<i class="badge"></i></button>
+        <button data-tab="shop" type="button">商店</button>
         <button data-tab="rebirth" type="button">転生</button>
         <button data-tab="rec" type="button">記録</button>
       </nav>
@@ -617,6 +618,24 @@ function dropItem(){
   dirty.equip=true;
 }
 function sellValue(it){ S.gold+=it.value; S.totalGold+=it.value; gainGps(it.value); }
+/* ---- shop: rotating random equipment stock ---- */
+let shopStock=[], shopT=0;
+function shopRefresh(){
+  shopStock=Array.from({length:4},()=>makeItem(S.floor+ri(0,2)));
+  shopStock.forEach(it=>it.price=Math.ceil(it.value*3.5));
+  shopT=Date.now()+10*60*1000;
+  save();
+}
+function shopBuy(i){
+  const it=shopStock[i];
+  if(!it||S.gold<it.price) return;
+  if(S.bag.length>=BAG_MAX){ log('バックログが満杯だ','warn'); return; }
+  S.gold-=it.price;
+  S.bag.push(it); S.itemsFound++;
+  shopStock[i]=null;
+  log('商店で '+it.name+' を購入（-'+fmt(it.price)+'G）','gold');
+  sfx.coin(); dirty.equip=true; renderTab(); save();
+}
 let bagSort='score';
 let bagFilter='all'; // all | locked | free
 function bagSorted(){ const l=S.bag.slice(); if(bagSort==='score') l.sort((a,b)=>b.score-a.score); else l.reverse(); return l; }
@@ -1818,6 +1837,24 @@ function itemCard(slotName,it){
     +'<div class="sScore">戦闘力 '+fmt(it.score)+'</div>'
     +'<div class="fuseRow"><button class="buyBtn fuseBtn" data-slot="'+it.slot+'" '+(can?'':'disabled')+'>'+(it.plus>0?'+'+(it.plus+1):'+1')+' へ強化（素材 '+Math.min(mats,2)+'/2 + '+fmt(cost)+'G）</button></div></div>';
 }
+let shopRowsTimer=false;
+function renderShop(){
+  const box=document.getElementById('shopRows');
+  if(!box) return;
+  let h='';
+  shopStock.forEach((it,i)=>{
+    if(!it){ h+='<div class="slotCard" style="opacity:.45"><div class="sName none">― 売り切れ ―</div></div>'; return; }
+    const R=RARITY[it.r], can=S.gold>=it.price;
+    h+='<div class="slotCard r'+it.r+'"><div class="sSlot">'+SLOT_NAME[it.slot]+' / '+R.n+'</div>'
+      +'<div class="sName '+R.cls+'">'+itName(it)+' <span style="font-weight:400;font-size:10px;color:var(--ink-faint)">('+it.lv+'F相当)</span></div>'
+      +'<div class="sStats">'+itemStats(it)+'</div>'
+      +'<button class="buyBtn skBuy skUnlock" data-i="'+i+'" '+((can)?'':'disabled')+'>購入する<span class="c">'+fmt(it.price)+' G</span></button></div>';
+  });
+  box.innerHTML=h;
+  box.querySelectorAll('button[data-i]').forEach(b=>b.addEventListener('click',()=>shopBuy(+b.dataset.i)));
+  const st=document.getElementById('shopTimer');
+  if(st) st.textContent=Math.max(0,Math.ceil((shopT-Date.now())/60000));
+}
 function renderTab(){
   refsUp.length=0;
   if(curTab==='equip'){
@@ -1928,6 +1965,14 @@ function renderTab(){
       refsUp[i]={btn:tabContent.querySelector('.buyBtn[data-id="'+u.id+'"]'),lv:tabContent.querySelectorAll('.uLv')[i]};
     });
     updateUp();
+  }else if(curTab==='shop'){
+    if(!shopStock.length||Date.now()>shopT) shopRefresh();
+    let h='<div class="secTitle">武器屋の行商</div>'
+      +'<p style="font-size:11px;color:var(--ink-faint);margin-bottom:8px">品物は <b id="shopTimer" style="color:var(--gold)">'+Math.max(0,Math.ceil((shopT-Date.now())/60000))+'</b> 分ごとに入れ替わる。中には掘り出し物も…。</p>'
+      +'<div class="shopRows" id="shopRows"></div>';
+    tabContent.innerHTML=h;
+    renderShop();
+    shopRowsTimer=true;
   }else if(curTab==='rebirth'){
     const g=soulsGain(), can=S.runFloor>=25;
     tabContent.innerHTML=
@@ -2253,7 +2298,7 @@ if(prev&&S.gps>0){
 }
 log('地下牢の最奥で、冒険者は剣を構えた。討伐は自動 ― お前は見届けるだけだ。','sys');
 renderTab(); hud();
-let last=performance.now(), uiT=0, saveT=0, errN=0;
+let last=performance.now(), uiT=0, saveT=0, errN=0, uiShopT=0;
 function loop(now){
   const dt=Math.min(0.1,(now-last)/1000); last=now;
   S.playSec+=dt;
@@ -2261,6 +2306,7 @@ function loop(now){
   S.gps=calcGps();
   uiT+=dt; if(uiT>0.15){ uiT=0; hud(); if(curTab==='up') updateUp(); if(dirty.equip&&curTab==='equip'){ dirty.equip=false; renderTab(); } if(dirty.up&&curTab==='up'){ dirty.up=false; renderTab(); } }
   saveT+=dt; if(saveT>5){ saveT=0; save(); }
+  if(shopRowsTimer){ uiShopT+=dt; if(uiShopT>1){ uiShopT=0; if(Date.now()>shopT){ shopRefresh(); if(curTab==='shop') renderShop(); } else if(curTab==='shop'){ const st2=document.getElementById('shopTimer'); if(st2) st2.textContent=Math.max(0,Math.ceil((shopT-Date.now())/60000)); } } }
   try{ draw(now/1000); }catch(e){ if(errN<5){ errN++; console.error(e); } }
   requestAnimationFrame(loop);
 }
