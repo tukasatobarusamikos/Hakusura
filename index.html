@@ -252,6 +252,17 @@ body{
 .plusTag{font-family:var(--font-pixel);color:var(--ember);font-size:12px}
 .fuseRow{margin-top:8px}
 
+.catHead{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line);margin:14px 0 8px;padding-bottom:4px}
+.catHead b{font-size:12px;letter-spacing:.25em;color:var(--ember)}
+.catHead span{font-family:var(--font-pixel);font-size:11px;color:var(--ink-faint)}
+.bestBtn{
+  width:100%;margin-bottom:12px;padding:13px 0;cursor:pointer;border-radius:4px;
+  font-family:var(--font-pixel);font-size:15px;letter-spacing:.12em;color:#3a2800;
+  background:linear-gradient(180deg,#ffe9a8,#ffd166);border:1px solid #a8851e;
+  box-shadow:0 3px 0 #6e5510;
+}
+.bestBtn:active{transform:translateY(2px);box-shadow:0 1px 0 #6e5510}
+
 :focus-visible{outline:2px solid var(--ember);outline-offset:2px}
 @media (prefers-reduced-motion: reduce){ *{animation:none!important;transition:none!important} }
 
@@ -406,7 +417,8 @@ function heroDef(){ return eqSum('def')+Math.floor(S.level/2); }
 function mobAtk(f,g){ return Math.max(1,5*Math.pow(1.235,f-1)*g*(1+0.06*S.kills)); }
 
 /* ================= items ================= */
-const SLOTS=[['weapon','武器'],['armor','鎧'],['ring','指輪'],['amulet','護符']];
+const SLOTS=[['weapon','武器'],['armor','防具'],['ring','指輪'],['amulet','護符']];
+const SLOT_NAME={weapon:'武器',armor:'防具',ring:'指輪',amulet:'護符'};
 const RARITY=[
   {n:'コモン',cls:'c0',m:1,w:100},
   {n:'レア',cls:'c1',m:1.8,w:28},
@@ -511,6 +523,37 @@ function dropItem(){
 function sellValue(it){ S.gold+=it.value; S.totalGold+=it.value; gainGps(it.value); }
 let bagSort='score';
 function bagSorted(){ const l=S.bag.slice(); if(bagSort==='score') l.sort((a,b)=>b.score-a.score); else l.reverse(); return l; }
+function bagRowHtml(it){
+  const R=RARITY[it.r], cur=S.equip[it.slot];
+  const diff=cur?it.score-cur.score:it.score;
+  const dHtml=cur?(diff>=0?'<span class="bDiff up">▲ +'+fmt(diff)+'</span>':'<span class="bDiff down">▼ '+fmt(diff)+'</span>'):'<span class="bDiff up">▲ +'+fmt(diff)+'</span>';
+  return '<div class="bagRow r'+it.r+'"><div class="bMain">'
+    +'<div class="bName '+R.cls+'">'+itName(it)+'<span class="bSlot">'+SLOT_NAME[it.slot]+'／'+R.n+'</span></div>'
+    +'<div class="sStats">'+itemStats(it)+'</div></div>'
+    +'<div class="bSide"><div class="bScore">戦力 '+fmt(it.score)+dHtml+'</div>'
+    +'<div class="bBtns"><button class="bEquip" type="button">装備</button><button class="bSell" type="button">売却</button></div></div></div>';
+}
+function equipBest(){
+  let changed=0;
+  for(const [k] of SLOTS){
+    let best=null,bi=-1;
+    for(let i=0;i<S.bag.length;i++){
+      const it=S.bag[i];
+      if(it.slot!==k) continue;
+      if(!best||it.score>best.score){ best=it; bi=i; }
+    }
+    if(best&&(!S.equip[k]||best.score>S.equip[k].score)){
+      const cur=S.equip[k];
+      S.bag.splice(bi,1);
+      if(cur) S.bag.push(cur);
+      S.equip[k]=best;
+      changed++;
+    }
+  }
+  if(changed){ log('最適装備を整えた（'+changed+'箇所を更新）','gold'); sfx.level(); }
+  else log('バックログに、いまより強い装備はない。','sys');
+  renderTab(); save();
+}
 function equipFromBag(i){
   const it=S.bag[i]; if(!it) return;
   const cur=S.equip[it.slot];
@@ -1330,6 +1373,7 @@ const tabContent=$('#tabContent');
 let curTab='equip';
 const dirty={equip:true,up:true};
 const refsUp=[];
+const flat=[];
 function itemCard(slotName,it){
   if(!it) return '<div class="slotCard"><div class="sSlot">'+slotName+'</div><div class="sName none">― 未装備 ―</div><div class="sStats">敵を倒すと装備が手に入る</div></div>';
   const R=RARITY[it.r], cost=fuseCost(it);
@@ -1357,18 +1401,21 @@ function renderTab(){
       if(!S.bag.length){
         h+='<div class="noteBox">持ち駒がない。敵を倒して装備を集めよう。</div>';
       }else{
-        const list=bagSorted();
-        list.forEach(it=>{
-          const R=RARITY[it.r], cur=S.equip[it.slot];
-          const diff=cur?it.score-cur.score:it.score;
-          const dHtml=cur?(diff>=0?'<span class="bDiff up">▲ +'+fmt(diff)+'</span>':'<span class="bDiff down">▼ '+fmt(diff)+'</span>'):'<span class="bDiff up">▲ +'+fmt(diff)+'</span>';
-          h+='<div class="bagRow r'+it.r+'"><div class="bMain">'
-            +'<div class="bName '+R.cls+'">'+itName(it)+'<span class="bSlot">'+{weapon:'武器',armor:'鎧',ring:'指輪',amulet:'護符'}[it.slot]+'／'+R.n+'</span></div>'
-            +'<div class="sStats">'+itemStats(it)+'</div></div>'
-            +'<div class="bSide"><div class="bScore">戦力 '+fmt(it.score)+dHtml+'</div>'
-            +'<div class="bBtns"><button class="bEquip" type="button">装備</button><button class="bSell" type="button">売却</button></div></div></div>';
-        });
-        h+='<div class="noteBox">「装備」で今の装備と入れ替わる（前の装備はバックログへ戻る）。装備カードの「強化」でバックログの同部位2点を素材に合成できる。</div>';
+        h+='<button id="bestBtn" class="bestBtn" type="button">最適装備に一括変更</button>';
+        h+='<div class="bulkBtns"><button id="bulkCommon" type="button">レア未満を売却</button><button id="bulkWeaker" type="button">装備中より弱い物を売却</button></div>';
+        if(!S.bag.length){
+          h+='<div class="noteBox">持ち駒がない。敵を倒して装備を集めよう。</div>';
+        }else{
+          flat.length=0;
+          for(const [k] of SLOTS){
+            let grp=S.bag.filter(it=>it.slot===k);
+            if(!grp.length) continue;
+            if(bagSort==='score') grp.sort((a,b)=>b.score-a.score); else grp.reverse();
+            h+='<div class="catHead"><b>'+SLOT_NAME[k]+'</b><span>'+grp.length+'点</span></div>';
+            grp.forEach(it=>{ flat.push(it); h+=bagRowHtml(it); });
+          }
+          h+='<div class="noteBox">「装備」で今の装備と入れ替わる（前の装備はバックログへ戻る）。装備カードの「強化」でバックログの同部位2点を素材に合成できる。</div>';
+        }
       }
     }
     tabContent.innerHTML=h;
@@ -1377,9 +1424,9 @@ function renderTab(){
     const bw=$('#bulkWeaker'); if(bw) bw.addEventListener('click',()=>bulkSell('weaker'));
     tabContent.querySelectorAll('.sortSel button').forEach(b=>b.addEventListener('click',()=>{ bagSort=b.dataset.s; renderTab(); }));
     tabContent.querySelectorAll('.fuseBtn').forEach(b=>b.addEventListener('click',()=>fuseEquip(b.dataset.slot)));
-    const sorted=bagSorted();
+    const bb=$('#bestBtn'); if(bb) bb.addEventListener('click',equipBest);
     tabContent.querySelectorAll('.bagRow').forEach((row,idx)=>{
-      const it=sorted[idx];
+      const it=flat[idx];
       row.querySelector('.bEquip').addEventListener('click',()=>equipFromBag(S.bag.indexOf(it)));
       row.querySelector('.bSell').addEventListener('click',()=>sellFromBag(S.bag.indexOf(it)));
     });
