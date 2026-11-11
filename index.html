@@ -45,7 +45,7 @@ body{
   #mobileBar .mbItem.lv b{color:#ffd166}
   #mobileBar .mbItem span:first-child{color:var(--ink-dim);font-size:11px}
   #mobileBar #mbSnd{margin-left:auto;padding:7px 11px;background:var(--panel2);border:1px solid var(--line2);border-radius:6px;font-size:14px;color:var(--ink-dim)}
-  #mobileBar .xpWrap{width:64px;height:11px}
+  #mobileBar .xpWrap{width:100px;height:15px}
 }
 #top{
   display:flex;align-items:center;gap:16px;flex-wrap:wrap;
@@ -59,7 +59,7 @@ body{
 .purse{display:flex;align-items:center;gap:7px;padding:5px 12px;border:1px solid var(--line);background:var(--panel);border-radius:3px}
 .lvPurse{border-color:#a05a1a;background:linear-gradient(180deg,rgba(255,200,92,.12),rgba(255,157,61,.05))}
 .lvPurse b{color:#ffd166}
-.xpWrap{position:relative;display:inline-block;width:86px;height:14px;background:#10131c;border:1px solid var(--line2);border-radius:7px;overflow:hidden;vertical-align:middle}
+.xpWrap{position:relative;display:inline-block;width:112px;height:17px;background:#10131c;border:1px solid var(--line2);border-radius:8px;overflow:hidden;vertical-align:middle}
 .xpFill{position:absolute;inset:0;width:0%;background:linear-gradient(90deg,#ff9d3d,#ffd166);transition:width .3s}
 .xpTxt{position:absolute;inset:0;text-align:center;font-family:var(--font-pixel);font-size:9px;line-height:14px;color:#fff;text-shadow:0 1px 2px #000}
 .purse b{font-family:var(--font-pixel);font-size:16px;color:var(--gold);min-width:72px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
@@ -84,7 +84,14 @@ body{
 }
 #floorLabel{font-family:var(--font-pixel);font-size:15px;color:var(--ink);letter-spacing:.05em;min-width:120px}
 #floorLabel em{font-style:normal;color:var(--ember)}
-#regionLabel{flex:1;text-align:center;min-width:0;white-space:nowrap;font-size:13px}
+#regionSel,#floorSel{
+  flex:1;min-width:0;max-width:46%;height:42px;padding:0 26px 0 8px;
+  background:var(--panel2);border:1px solid var(--line2);border-radius:8px;
+  color:var(--ink);font-family:var(--font-pixel);font-size:14px;-webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--ink-dim) 50%),linear-gradient(135deg,var(--ink-dim) 50%,transparent 50%);
+  background-position:calc(100% - 18px) 55%,calc(100% - 12px) 55%;
+  background-size:6px 6px,6px 6px;background-repeat:no-repeat;
+}
 .flBtn{
   min-width:46px;min-height:40px;font-size:16px;font-weight:700;
   background:var(--panel2);border:1px solid var(--line2);border-radius:8px;
@@ -395,13 +402,9 @@ body{
   <div id="main">
     <section id="battleWrap" aria-label="戦闘">
       <div id="floorBar">
-        <button class="flBtn" id="regDown" type="button" aria-label="前のステージ">《</button>
-        <div id="regionLabel">最初の森</div>
-        <button class="flBtn" id="regUp" type="button" aria-label="次のステージ">》</button>
-        <button class="flBtn" id="flDown" type="button" aria-label="階層を下げる">◀</button>
-        <div id="floorLabel">1 / 10</div>
+        <select id="regionSel" aria-label="ステージ選択"></select>
+        <select id="floorSel" aria-label="階層選択"></select>
         <div id="killDots"></div>
-        <button class="flBtn" id="flUp" type="button" aria-label="階層を上げる">▶</button>
       </div>
       <div id="bossChallengeWrap" style="display:none"><button id="bossChallenge" type="button">⚔ ボスに挑戦</button></div>
       <div id="canvasHolder">
@@ -412,11 +415,13 @@ body{
         <div id="skToast"></div>
         <div id="lvUpFx"><div class="luTxt">LEVEL UP!</div><div class="luLv" id="luLv"></div></div>
       </div>
+      <div id="bossChallengeWrap" style="display:none"><button id="bossChallenge" type="button">⚔ ボスに挑戦</button></div>
       <div id="battleCtl">
         <button id="skillBtn" type="button"><i class="cd" id="skillCd"></i><span>渾身の一撃</span></button>
         <button id="fireBtn" type="button"><i class="cd" id="fireCd"></i><span>烈火斬</span></button>
         <button id="potionBtn" type="button">薬 ×0</button>
         <button id="autoSkillBtn" class="tgl" type="button" aria-pressed="false">自動 OFF</button>
+        <button id="autoBossBtn" class="tgl" type="button" aria-pressed="false">ボス自動 OFF</button>
         <span id="hintTap">モンスターをタップしても攻撃できる</span>
       </div>
     </section>
@@ -504,7 +509,7 @@ const DEF=()=>({
   up:{atk:0,spd:0,crit:0,critd:0,goldup:0,luck:0,def:0,vit:0},
   equip:{weapon:null,armor:null,ring:null,amulet:null},
   bag:[], autoEquip:false, itemsFound:0, autoSkill:false,
-  potions:0, sp:0, sk:{},
+  potions:0, sp:0, sk:{}, autoBoss:false,
   bestDmg:0, totalKills:0, totalGold:0, playSec:0, gps:0,
   skillCd:0, muted:false, lastSeen:Date.now(),
 });
@@ -2237,10 +2242,17 @@ function hud(){
   els.dps.textContent=fmt(dps);
   const rf=regFloor(S.floor);
 const rn=REG(S.region).name;
-  els.region.textContent=rn;
-  els.region.style.fontSize=rn.length>6?'11px':'';
-  els.floor.title=rn+' '+regFloor(S.floor)+'F';
-  els.floor.innerHTML='<em>'+rf+'</em> / 10';
+  const rSel=document.getElementById('regionSel'), fSel=document.getElementById('floorSel');
+  if(rSel&&rSel.dataset.v!==String(S.region)){
+    rSel.dataset.v=String(S.region); rSel.innerHTML='';
+    for(let i=1;i<=Math.min(5,S.deepestRegion);i++){
+      const o=document.createElement('option'); o.value=i; o.textContent='ステージ'+i+' '+REG(i).name; if(i===S.region) o.selected=true; rSel.appendChild(o);
+    }
+  }
+  if(fSel&&fSel.dataset.v!==String(rf)){
+    fSel.dataset.v=String(rf); fSel.innerHTML='';
+    for(let i=1;i<=10;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i+'F'+(i===10?' 👑':''); if(i===rf) o.selected=true; fSel.appendChild(o); }
+  }
   const bossFloor=rf===10;
   [...els.dots.children].forEach((d,i)=>d.classList.toggle('on',bossFloor?true:i<S.kills));
   const chW=document.getElementById('bossChallengeWrap');
@@ -2248,10 +2260,7 @@ const rn=REG(S.region).name;
     const showCh=bossFloor&&!mob&&!(S.bossCleared&&S.bossCleared[S.region])&&!bossChallengeActive;
     chW.style.display=showCh?'':'none';
   }
-  els.up.disabled=rf>=10;
-  els.down.disabled=rf<=1;
-  els.regUp.disabled=S.region>=Math.min(5,S.deepestRegion);
-  els.regDown.disabled=S.region<=1;
+
   // skill
   const cd=S.skillCd||0;
   els.skillCdEl.style.transform='scaleX('+(cd/15)+')';
@@ -2312,6 +2321,7 @@ cv.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
 cv.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});
 els.skill.addEventListener('click',()=>castSkill());
 els.fire.addEventListener('click',()=>castFire());
+$('#autoBossBtn').addEventListener('click',()=>{ S.autoBoss=!S.autoBoss; const b=$('#autoBossBtn'); b.setAttribute('aria-pressed',String(S.autoBoss)); b.textContent=S.autoBoss?'ボス自動 ON':'ボス自動 OFF'; b.classList.toggle('on',S.autoBoss); save(); });
 els.pot.addEventListener('click',()=>drinkPotion(false));
 function castSkill(){
   if((S.skillCd||0)>0||!mob||mob.dying>0) return;
@@ -2393,14 +2403,17 @@ function gotoRegion(n){
   log('ステージ'+n+'「'+REG(n).name+'」へ移動した','sys');
   save();
 }
-$('#regDown').addEventListener('click',()=>gotoRegion(S.region-1));
 let chB2=document.getElementById('bossChallenge');
 if(!chB2){ chB2=document.createElement('button'); chB2.id='bossChallenge'; chB2.type='button'; chB2.textContent='⚔ ボスに挑戦'; chB2.style.display='none';
   const fb=document.getElementById('canvasHolder'); fb&&fb.parentElement.insertBefore(fb,chB2); }
 chB2.addEventListener('click',startBossChallenge);
+(function(){
+  const rS=document.getElementById('regionSel'), fS=document.getElementById('floorSel');
+  if(rS) rS.addEventListener('change',()=>{ const n=+rS.value; if(n && n!==S.region) gotoRegion(n); });
+  if(fS) fS.addEventListener('change',()=>{ const f=+fS.value, cur=regFloor(S.floor);
+    if(f && f!==cur){ S.floor=S.floor-cur+f; S.kills=0; mob=null; bossChallengeActive=false; $('#bossTimer').style.display='none'; save(); } });
+})();
 $('#regUp').addEventListener('click',()=>gotoRegion(S.region+1));
-$('#flDown').addEventListener('click',()=>{ if(regFloor(S.floor)>1){ S.floor--; S.kills=0; mob=null; bossChallengeActive=false; $('#bossTimer').style.display='none'; } });
-$('#flUp').addEventListener('click',()=>{ if(regFloor(S.floor)<10){ S.floor++; S.kills=0; mob=null; bossChallengeActive=false; $('#bossTimer').style.display='none'; } });
 $('#sndBtn').addEventListener('click',()=>{ S.muted=!S.muted; $('#sndBtn').textContent=S.muted?'音 OFF':'音 ON'; if(!S.muted) sfx.coin(); save(); });
 const autoSkillBtn=$('#autoSkillBtn');
 autoSkillBtn.addEventListener('click',()=>{
@@ -2450,6 +2463,7 @@ function loop(now){
   S.gps=calcGps();
   uiT+=dt; if(uiT>0.15){ uiT=0; hud(); if(curTab==='up') updateUp(); if(dirty.equip&&curTab==='equip'){ dirty.equip=false; renderTab(); } if(dirty.up&&curTab==='up'){ dirty.up=false; renderTab(); } }
   saveT+=dt; if(saveT>5){ saveT=0; save(); }
+  if(S.autoBoss&&regFloor(S.floor)===10&&!mob&&!(S.bossCleared&&S.bossCleared[S.region])&&!bossChallengeActive&&!hero.dead) startBossChallenge();
   if(shopRowsTimer){ uiShopT+=dt; if(uiShopT>1){ uiShopT=0; if(Date.now()>shopT){ shopRefresh(); if(curTab==='shop') renderShop(); } else if(curTab==='shop'){ const st2=document.getElementById('shopTimer'); if(st2) st2.textContent=Math.max(0,Math.ceil((shopT-Date.now())/60000)); } } }
   try{ draw(now/1000); }catch(e){ if(errN<5){ errN++; console.error(e); } }
   requestAnimationFrame(loop);
