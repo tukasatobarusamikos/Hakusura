@@ -103,7 +103,8 @@ body{
 #autoSkillBtn{padding:9px 16px;font-size:12px}
 
 /* ---------- panel ---------- */
-#statRow{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--line)}
+#statRow{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid var(--line)}
+#statRow #stHp,#statRow #stDef,#statRow #stCut{font-size:11px}
 #statRow #stHp{font-size:12px}
 #statRow .st{padding:9px 6px;text-align:center;border-right:1px solid var(--line)}
 #statRow .st:last-child{border-right:0}
@@ -330,6 +331,8 @@ body{
         <div class="st"><b id="stDps">0</b><span>秒間ダメージ</span></div>
         <div class="st"><b id="stCrit">0%</b><span>クリティカル</span></div>
         <div class="st"><b id="stHp">-</b><span>HP</span></div>
+        <div class="st"><b id="stDef">0</b><span>防御力</span></div>
+        <div class="st"><b id="stCut">0%</b><span>被ダメ軽減</span></div>
       </div>
       <nav id="tabs">
         <button data-tab="equip" class="on" type="button">装備</button>
@@ -380,7 +383,7 @@ const DEF=()=>({
   floor:1, runFloor:1, bestFloor:1, kills:0,
   region:1, deepestRegion:1,
   level:1, xp:0,
-  up:{atk:0,spd:0,crit:0,critd:0,goldup:0,luck:0},
+  up:{atk:0,spd:0,crit:0,critd:0,goldup:0,luck:0,def:0,vit:0},
   equip:{weapon:null,armor:null,ring:null,amulet:null},
   bag:[], autoEquip:false, itemsFound:0, autoSkill:false,
   potions:0, sp:0, sk:{},
@@ -396,7 +399,7 @@ function load(){
   try{
     const d=JSON.parse(raw);
     S=deepMerge(DEF(),d);
-    S.up=Object.assign({atk:0,spd:0,crit:0,critd:0,goldup:0,luck:0},d.up||{});
+    S.up=Object.assign({atk:0,spd:0,crit:0,critd:0,goldup:0,luck:0,def:0,vit:0},d.up||{});
     S.bag=Array.isArray(d.bag)?d.bag:[];
     S.autoEquip=!!d.autoEquip; S.autoSkill=!!d.autoSkill;
     S.potions=d.potions||0; S.sp=d.sp||0;
@@ -419,9 +422,10 @@ function dropC(){ return Math.min(0.5,0.08+0.01*S.up.luck); }
 function xpNeed(){ return Math.floor(30*Math.pow(1.2,S.level-1)); }
 function goldPerKill(){ return Math.max(1,Math.ceil(3*Math.pow(1.24,S.floor-1)*goldM())); }
 function soulsGain(){ return Math.max(0,Math.floor(Math.pow(S.runFloor/10,1.6))); }
-function maxHp(){ return Math.floor((60+22*(S.level-1)+eqSum('hp'))*(1+0.02*S.souls)*(1+0.08*(S.sk.hp||0))); }
-function heroDef(){ return eqSum('def')+Math.floor(S.level/2); }
+function maxHp(){ return Math.floor((60+22*(S.level-1)+eqSum('hp'))*(1+0.02*S.souls)*(1+0.06*(S.up.vit||0))*(1+0.08*(S.sk.hp||0))); }
+function heroDef(){ return Math.floor((eqSum('def')+Math.floor(S.level/2))*(1+0.08*(S.up.def||0))); }
 function mobAtk(f,g){ return Math.max(1,5*Math.pow(1.235,f-1)*g*(1+0.06*S.kills)); }
+function dmgCut(){ const atk=mobAtk(S.floor,1.0); return clamp(heroDef()*0.6/atk,0,0.6); }
 
 /* ================= items ================= */
 const SLOTS=[['weapon','武器'],['armor','防具'],['ring','指輪'],['amulet','護符']];
@@ -747,7 +751,7 @@ function tickCombat(dt){
       mob.atkT=mob.M.aI*rand(0.85,1.2);
       mob.lunge=1;
       let d=mobAtk(S.floor,mob.M.d)*(mob.boss?1.5:1);
-      d=Math.max(1,Math.round(d-heroDef()*0.6));
+      d=Math.max(1,Math.round(d*(1-dmgCut())));
       hero.hp-=d; hero.hurt=1;
       sfx.hurt(); shake=Math.max(shake,6);
       fx.push({k:'t',str:'-'+fmt(d),crit:false,x:0.24,y:0.34,v:0.06,life:1});
@@ -868,6 +872,8 @@ const UPS=[
   {id:'spd',   n:'連撃の極意', base:30, g:1.42, max:40,  eff:l=>'攻撃間隔 '+(1.1*Math.pow(0.96,l)).toFixed(2)+'秒 → <b>'+(1.1*Math.pow(0.96,l+1)).toFixed(2)+'秒</b>'},
   {id:'crit',  n:'急所狙い',  base:55, g:1.35, max:50,  eff:l=>'クリ率 '+(5+l)+'% → <b>'+(6+l)+'%</b>'},
   {id:'critd', n:'会心の磨き', base:45, g:1.28, max:1e9, eff:l=>'クリ倍率 '+(150+15*l)+'% → <b>'+(150+15*(l+1))+'%</b>'},
+  {id:'def',   n:'守りの型',   base:30, g:1.20, max:1e9, eff:l=>'防御力 +'+(8*l)+'% → <b>+'+(8*(l+1))+'%</b>'},
+  {id:'vit',   n:'生命鍛錬',   base:26, g:1.20, max:1e9, eff:l=>'最大HP +'+(6*l)+'% → <b>+'+(6*(l+1))+'%</b>'},
   {id:'goldup',n:'金目当て',  base:28, g:1.22, max:1e9, eff:l=>'獲得金 +'+(10*l)+'% → <b>+'+(10*(l+1))+'%</b>'},
   {id:'luck',  n:'探索運',    base:90, g:1.6,  max:42,  eff:l=>'ドロップ率 '+(8+l)+'% → <b>'+(9+l)+'%</b>'},
 ];
@@ -1802,7 +1808,7 @@ function modal(title,body,okLabel,onOk,noLabel){
 
 /* ================= hud ================= */
 const els={
-  gold:$('#goldVal'),soul:$('#soulVal'),atk:$('#stAtk'),dps:$('#stDps'),crit:$('#stCrit'),hp:$('#stHp'),
+  gold:$('#goldVal'),soul:$('#soulVal'),atk:$('#stAtk'),dps:$('#stDps'),crit:$('#stCrit'),hp:$('#stHp'),def:$('#stDef'),cut:$('#stCut'),
   vig:$('#hurtVig'),
   floor:$('#floorLabel'),region:$('#regionLabel'),dots:$('#killDots'),up:$('#flUp'),down:$('#flDown'),regUp:$('#regUp'),regDown:$('#regDown'),
   skill:$('#skillBtn'),skillCdEl:$('#skillCd'),bossFill:$('#bossFill'),xp:null,
@@ -1818,6 +1824,8 @@ function hud(){
   els.atk.textContent=fmt(atkVal());
   els.crit.textContent=Math.round(critC()*100)+'%';
   els.hp.textContent=fmt(hero?Math.ceil(hero.hp):maxHp())+' / '+fmt(maxHp());
+  els.def.textContent=fmt(heroDef());
+  els.cut.textContent=Math.round(dmgCut()*100)+'%';
   const lowVig=hero?clamp((1-hero.hp/hero.max-0.55)/0.45,0,1)*0.7:0;
   els.vig.style.opacity=Math.max(lowVig,hero&&hero.hurt>0?hero.hurt*0.5:0).toFixed(2);
   const now=performance.now();
