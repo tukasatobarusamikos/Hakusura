@@ -19,8 +19,9 @@
   --font-pixel:"DotGothic16","Zen Kaku Gothic New",sans-serif;
 }
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-button,#cv{touch-action:manipulation}
-#cv{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+button{touch-action:manipulation}
+#cv{touch-action:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+html{overscroll-behavior-y:contain}
 html,body{height:100%}
 body{
   background:var(--bg); color:var(--ink); font-family:var(--font-body);
@@ -1583,6 +1584,8 @@ cv.addEventListener('pointerdown',e=>{
   if(tapCd>0) return; tapCd=0.09;
   swing(1,false);
 });
+cv.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+cv.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});
 els.skill.addEventListener('click',()=>castSkill());
 els.fire.addEventListener('click',()=>castFire());
 els.pot.addEventListener('click',()=>drinkPotion(false));
