@@ -482,7 +482,8 @@ function load(){
     return d;
   }catch(e){ return null; }
 }
-function save(){ S.lastSeen=Date.now(); try{ localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){} }
+let wiped=false;
+function save(){ if(wiped) return; S.lastSeen=Date.now(); try{ localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){} }
 
 /* ================= derived ================= */
 function eqSum(k){ let t=0; for(const s in S.equip){ const it=S.equip[s]; if(it) t+=(it[k]||0); } return t; }
@@ -1943,8 +1944,10 @@ function askRebirth(){
 }
 function askWipe(){
   modal('データ削除','セーブデータを完全に削除し、最初からやり直します。\nこの操作は取り消せません。','削除する',()=>{
+    wiped=true;
     try{ localStorage.removeItem(SAVE_KEY); }catch(e){}
-    location.reload();
+    log('セーブデータを削除した','warn');
+    setTimeout(()=>location.reload(),300);
   });
 }
 
@@ -2203,6 +2206,5 @@ function loop(now){
 requestAnimationFrame(loop);
 
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
