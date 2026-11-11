@@ -506,7 +506,7 @@ let ITEM_UID=1;
 const DEF=()=>({
   v:1, gold:0, souls:0, rebirths:0,
   floor:1, runFloor:1, bestFloor:1, kills:0,
-  region:1, deepestRegion:1, bossCleared:{},
+  region:1, deepestRegion:1, bossCleared:{}, deepFloor:{1:1},
   level:1, xp:0,
   up:{atk:0,spd:0,crit:0,critd:0,goldup:0,luck:0,def:0,vit:0},
   equip:{weapon:null,armor:null,ring:null,amulet:null},
@@ -531,6 +531,9 @@ function load(){
     S.autoEquip=!!d.autoEquip; S.autoSkill=!!d.autoSkill;
     S.potions=d.potions||0; S.sp=d.sp||0;
     S.region=d.region||1; S.deepestRegion=d.deepestRegion||S.region;
+    S.deepFloor=Object.assign({1:1},d.deepFloor||{});
+    for(let r=1;r<S.deepestRegion;r++) S.deepFloor[r]=10;
+    S.deepFloor[S.region]=Math.max(S.deepFloor[S.region]||1,regFloor(S.floor||1));
     S.sk=Object.assign({atk:0,hp:0,spd:0,crit:0,critd:0,gold:0,heal:0,combo:0,fire:0,execute:0,goushin:0},d.sk||{});
     S.mainSkill='goushin';
     // migrate old multi-main saves: count unlocked mains as tier progress
@@ -918,7 +921,7 @@ function killMob(){
     S.kills++;
     if(S.kills>=KILL_NEED){
       if(regFloor(S.floor)<10){
-        S.kills=0; S.floor++; S.runFloor=Math.max(S.runFloor,S.floor); S.bestFloor=Math.max(S.bestFloor,S.floor); S.floorChanged=true;
+        S.kills=0; S.floor++; S.runFloor=Math.max(S.runFloor,S.floor); S.bestFloor=Math.max(S.bestFloor,S.floor); S.floorChanged=true; S.deepFloor[S.region]=Math.max(S.deepFloor[S.region]||1,regFloor(S.floor));
       }else{
         S.kills=0;
       }
@@ -1023,7 +1026,8 @@ function tickCombat(dt){
       }
     }
   }
-  if(!mob) spawnMob();
+  const bossWait=regFloor(S.floor)===10&&!(S.bossCleared&&S.bossCleared[S.region])&&!bossChallengeActive&&bossT<=0;
+  if(!mob&&!bossWait) spawnMob();
   // burning damage
   if(mob&&mob.burn&&mob.burn.t>0&&!hero.dead){
     mob.burn.t-=dt; mob.burn.acc+=dt;
@@ -2252,9 +2256,10 @@ const rn=REG(S.region).name;
       const o=document.createElement('option'); o.value=i; o.textContent='ステージ'+i+' '+REG(i).name; if(i===S.region) o.selected=true; rSel.appendChild(o);
     }
   }
-  if(fSel&&fSel.dataset.v!==String(rf)){
-    fSel.dataset.v=String(rf); fSel.innerHTML='';
-    for(let i=1;i<=10;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i+'F'+(i===10?' 👑':''); if(i===rf) o.selected=true; fSel.appendChild(o); }
+  const fmax=Math.min(10,Math.max(1,(S.deepFloor&&S.deepFloor[S.region])||1));
+  if(fSel&&fSel.dataset.v!==rf+'/'+fmax){
+    fSel.dataset.v=rf+'/'+fmax; fSel.innerHTML='';
+    for(let i=1;i<=fmax;i++){ const o=document.createElement('option'); o.value=i; o.textContent=i+'F'+(i===fmax&&fmax<10?' 🔒':i===10?' 👑':''); if(i===rf) o.selected=true; fSel.appendChild(o); }
   }
   const bossFloor=rf===10;
   [...els.dots.children].forEach((d,i)=>d.classList.toggle('on',bossFloor?true:i<S.kills));
@@ -2402,7 +2407,7 @@ window.addEventListener('keydown',e=>{
 function gotoRegion(n){
   n=clamp(n,1,5);
   if(n>S.deepestRegion||n===S.region) return;
-  S.region=n; S.floor=(n-1)*10+1; S.kills=0; mob=null; bossChallengeActive=false;
+  S.region=n; S.floor=(n-1)*10+1; S.kills=0; mob=null; bossChallengeActive=false; S.deepFloor[n]=Math.max(S.deepFloor[n]||1,regFloor(S.floor));
   $('#bossTimer').style.display='none';
   log('ステージ'+n+'「'+REG(n).name+'」へ移動した','sys');
   save();
