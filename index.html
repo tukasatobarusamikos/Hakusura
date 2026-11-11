@@ -729,6 +729,9 @@ function tickFx(dt){
     else if(f.k==='c'){ f.x+=f.vx*dt; f.vy+=dt*0.9; f.y+=f.vy*dt; f.life-=dt*1.2; }
     else if(f.k==='p'){ f.x+=f.vx*dt; f.vy+=dt*0.9; f.y+=f.vy*dt; f.life-=dt*1.6; }
     else if(f.k==='s'){ f.life-=dt*7; }
+    else if(f.k==='C'){ f.life-=dt*2.2; }
+    else if(f.k==='v'){ f.life-=dt*1.6; }
+    else if(f.k==='f'){ f.life-=dt*5; }
     else if(f.k==='r'){ f.life-=dt*1.4; }
     if(f.life<=0) fx.splice(i,1);
   }
