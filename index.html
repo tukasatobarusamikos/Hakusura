@@ -396,6 +396,7 @@ function critC(){ return Math.min(0.75,0.05+0.01*S.up.crit+0.02*(S.sk.crit||0)+e
 function critM(){ return 1.5+0.15*S.up.critd+0.12*(S.sk.critd||0)+eqSum('critd')/100; }
 function goldM(){ return (1+0.10*S.up.goldup)*(1+0.02*S.souls)*(1+0.06*(S.sk.gold||0))*(1+eqSum('gold')/100); }
 function healM(){ return 1+0.5*(S.sk.heal||0); }
+function dropC(){ return Math.min(0.5,0.08+0.01*S.up.luck); }
 function xpNeed(){ return Math.floor(30*Math.pow(1.2,S.level-1)); }
 function goldPerKill(){ return Math.max(1,Math.ceil(3*Math.pow(1.24,S.floor-1)*goldM())); }
 function soulsGain(){ return Math.max(0,Math.floor(Math.pow(S.runFloor/10,1.6))); }
@@ -1662,15 +1663,15 @@ if(prev&&S.gps>0){
 }
 log('地下牢の最奥で、冒険者は剣を構えた。討伐は自動 ― お前は見届けるだけだ。','sys');
 renderTab(); hud();
-let last=performance.now(), uiT=0, saveT=0;
+let last=performance.now(), uiT=0, saveT=0, errN=0;
 function loop(now){
   const dt=Math.min(0.1,(now-last)/1000); last=now;
   S.playSec+=dt;
-  tickCombat(dt); tickFx(dt);
+  try{ tickCombat(dt); tickFx(dt); }catch(e){ if(errN<5){ errN++; console.error(e); } }
   S.gps=calcGps();
   uiT+=dt; if(uiT>0.15){ uiT=0; hud(); if(curTab==='up') updateUp(); if(dirty.equip&&curTab==='equip'){ dirty.equip=false; renderTab(); } if(dirty.up&&curTab==='up'){ dirty.up=false; renderTab(); } }
   saveT+=dt; if(saveT>5){ saveT=0; save(); }
-  draw(now/1000);
+  try{ draw(now/1000); }catch(e){ if(errN<5){ errN++; console.error(e); } }
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
