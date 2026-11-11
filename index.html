@@ -117,16 +117,18 @@ body{
 #statRow .st:last-child{border-right:0}
 #statRow .st b{display:block;font-family:var(--font-pixel);font-size:16px;color:var(--ink)}
 #statRow .st span{font-size:10px;color:var(--ink-faint);letter-spacing:.15em}
-#tabs{display:flex;border-bottom:1px solid var(--line)}
+#tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;padding:9px 9px 8px;border-bottom:1px solid var(--line)}
 #tabs button{
-  flex:1;padding:10px 0;background:transparent;border:0;border-right:1px solid var(--line);
-  color:var(--ink-dim);font-family:var(--font-body);font-size:13px;font-weight:700;cursor:pointer;
-  letter-spacing:.1em;
+  position:relative;padding:13px 2px 11px;background:var(--panel2);border:1px solid var(--line);border-radius:9px;
+  color:var(--ink-dim);font-family:var(--font-body);font-size:14px;font-weight:700;cursor:pointer;
+  letter-spacing:.06em;line-height:1.2;transition:transform .06s;
 }
-#tabs button:last-child{border-right:0}
-#tabs button.on{color:var(--gold);background:var(--panel2);box-shadow:inset 0 -2px 0 var(--gold)}
-#tabs button{position:relative}
-#tabs button .badge{display:none;position:absolute;top:5px;right:8px;min-width:9px;height:9px;border-radius:50%;background:#ff4d4d;box-shadow:0 0 6px rgba(255,77,77,.9);animation:bdgPulse 1.2s ease-in-out infinite}
+#tabs button:active{transform:scale(.94)}
+#tabs button.on{
+  color:var(--gold);border-color:var(--gold);background:linear-gradient(180deg,rgba(255,200,87,.14),rgba(255,200,87,.05));
+  box-shadow:0 0 10px rgba(255,200,87,.25),inset 0 0 0 1px rgba(255,200,87,.2);
+}
+#tabs button .badge{display:none;position:absolute;top:6px;right:9px;min-width:9px;height:9px;border-radius:50%;background:#ff4d4d;box-shadow:0 0 6px rgba(255,77,77,.9);animation:bdgPulse 1.2s ease-in-out infinite}
 #tabs button.canUnlock .badge{display:block}
 #tabs button.canUnlock{color:var(--gold)}
 @keyframes bdgPulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.35);opacity:.75}}
@@ -321,7 +323,8 @@ body{
   #canvasHolder{height:46vh;flex:none}
   .brand h1{font-size:17px}
   .purse b{font-size:13px;min-width:44px}
-  #tabs button{padding:13px 0;font-size:14px}
+  #tabs{gap:8px;padding:10px 10px 9px}
+  #tabs button{padding:16px 2px 14px;font-size:15px}
   .buyBtn{padding:14px 0;font-size:15px}
   .bBtns button{padding:8px 16px;font-size:12px}
   .bulkBtns button{padding:9px 4px;font-size:12px}
