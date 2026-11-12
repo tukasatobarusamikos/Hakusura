@@ -848,11 +848,21 @@ const MOBS={
 function biome(){ return REG(S.region); }
 function regFloor(f){ return (f-1)%10+1; }
 let mob=null, bossT=0, bossChallengeActive=false;
+const BOSS_SP_REQ=[0,2,6,12,20,30];
+function bossSpReq(){ return BOSS_SP_REQ[S.region]||0; }
+function spInvested(){ let t=0; SKS.forEach(n=>t+=(S.sk[n.id]||0)*n.base); return t; }
 function startBossChallenge(){
+  if(spInvested()<bossSpReq()){
+    const lack=bossSpReq()-spInvested();
+    log('⚠ ボスは強大だ… もっとスキルを鍛えてから挑もう（あと '+lack+' SP分の投資が必要）','warn');
+    sfx.no(); bossChallengeActive=false; bossT=0;
+    ['bossChallengeWrap','bossChallengeWrapA'].forEach(function(id){ const el=document.getElementById(id); if(el) el.style.display=''; });
+    return;
+  }
   bossChallengeActive=true; fieldBgmStop(); bossBgmStart();
   const rg=REG(S.region), key=rg.boss, M=MOBS[key], f=S.floor;
-  const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*(M.boss?12:1));
-  mob={key,M,el:MOB_EL[key],boss:true,max:hp,hp,hurt:0,born:0,atkT:M.aI*rand(0.9,1.3),lunge:0,dying:0};
+  const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*(M.boss?9:1));
+  mob={key,M,el:MOB_EL[key],boss:true,max:hp,hp,hurt:0,born:0,atkT:3.0*rand(0.9,1.3),lunge:0,dying:0};
   bossT=BOSS_TIME; $('#bossTimer').style.display='block';
   ['bossChallengeWrap','bossChallengeWrapA'].forEach(function(id){ const el=document.getElementById(id); if(el) el.style.display='none'; });
   log('⚠ '+M.name+'（'+ELS[MOB_EL[key]].n+'属性）に挑んだ！','warn'); sfx.boss(); shake=Math.max(shake,9); ringFx(0.72,0.62,'#e5484d');
@@ -1102,13 +1112,15 @@ let bossBgmEl=null, fieldBgmEl=null;
 function fieldBgmStart(){
   try{
     if(S.muted) return;
+    if(bossChallengeActive) return;   // ボス戦中は通常BGMを再生しない
+    if(S.region!==1) return;          // BGMはステージ1のみ
     if(!fieldBgmEl){ fieldBgmEl=new Audio(NORMAL_BGM_REGION1); fieldBgmEl.loop=true; fieldBgmEl.volume=0.22; }
     if(!fieldBgmEl.paused) return;
     fieldBgmEl.currentTime=0; fieldBgmEl.play().catch(()=>{});
   }catch(e){}
 }
 function fieldBgmStop(){ try{ if(fieldBgmEl&&!fieldBgmEl.paused) fieldBgmEl.pause(); }catch(e){} }
-function bossBgmStart(){ try{ if(!bossBgmEl){ bossBgmEl=new Audio(BOSS_BGM); bossBgmEl.loop=true; bossBgmEl.volume=0.22; } bossBgmEl.currentTime=0; bossBgmEl.play().catch(()=>{}); }catch(e){} }
+function bossBgmStart(){ try{ if(S.region!==1||S.muted) return; if(fieldBgmEl&&!fieldBgmEl.paused) fieldBgmEl.pause(); if(!bossBgmEl){ bossBgmEl=new Audio(BOSS_BGM); bossBgmEl.loop=true; bossBgmEl.volume=0.22; } bossBgmEl.currentTime=0; bossBgmEl.play().catch(()=>{}); }catch(e){} }
 function bossBgmStop(){ try{ if(bossBgmEl){ bossBgmEl.pause(); bossBgmEl.currentTime=0; } }catch(e){} }
 let AC=null, noiseBuf=null;
 function ac(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(AC&&AC.state==='suspended') AC.resume(); return AC; }
@@ -2094,24 +2106,6 @@ function renderTab(){
   }else if(curTab==='sk'){
     let h='<div class="secTitle">スキルポイント</div><div class="bigNum" style="color:var(--gold)">'+S.sp+' SP</div>'
       +'<p style="font-size:11px;color:var(--ink-faint)">レベルアップ1回につき +1 SP</p>'
-      +'<div class="secTitle">パッシブ</div>';
-    for(const n of SKS.filter(x=>!x.active)){
-      const l=S.sk[n.id]||0, maxed=l>=n.max;
-      h+='<div class="skNode"><div class="uHead"><span class="uName">'+n.n+'</span><span class="uLv">'+(n.max>1?'Lv '+l+' / '+n.max:(l?'習得済':'未習得'))+'</span></div>'
-        +'<div class="uEff">'+n.d+'</div>'
-        +'<button class="buyBtn skBuy '+(maxed?'skDone':'skUnlock')+'" data-id="'+n.id+'" '+((maxed||S.sp<n.base)?'disabled':'')+'>'+(maxed?'✔ MAX':'Lv '+(l+1)+' にする<span class="c">'+n.base+' SP</span>')+'</button></div>';
-    }
-    h+='<div class="secTitle">アビリティ（解放 / 強化）</div>';
-    for(const n of SKS.filter(x=>x.active)){
-      const l=S.sk[n.id]||0, maxed=l>=n.max;
-      let btn;
-      if(!l) btn='<button class="buyBtn skBuy skUnlock" data-id="'+n.id+'" '+((S.sp<n.base)?'disabled':'')+'>解放する<span class="c">'+n.base+' SP</span></button>';
-      else if(maxed) btn='<button class="buyBtn skBuy skDone" disabled>✔ MAX</button>';
-      else btn='<button class="buyBtn skBuy skUnlock" data-id="'+n.id+'" '+((S.sp<n.base)?'disabled':'')+'>Lv '+(l+1)+' にする<span class="c">'+n.base+' SP</span></button>';
-      h+='<div class="skNode'+(l?'':' locked')+'"><div class="uHead"><span class="uName act">'+n.n+'</span><span class="uLv">'+(n.max>1?'Lv '+l+' / '+n.max:(l?'解放済':'未解放'))+'</span></div>'
-        +'<div class="uEff">'+n.d+'</div>'
-        +btn+'</div>';
-    }
     h+='<div class="secTitle">必殺技（段階強化）</div>';
     {
       const l=S.sk.goushin||0, maxed=l>=MAIN_MAX;
@@ -2122,6 +2116,17 @@ function renderTab(){
           ?'<button class="buyBtn skBuy skDone" disabled>✔ 最終段階</button>'
           :'<button class="buyBtn skBuy skUnlock" data-id="goushin" '+((S.sp<cost)?'disabled':'')+'>'+(l?'次段階へ「'+MAIN_TIERS[l].n+'」<span class="c">'+cost+' SP</span>':'解放する<span class="c">'+cost+' SP</span>')+'</button>')
         +'</div>';
+    }
+        h+='<div class="secTitle">アビリティ（解放 / 強化）</div>';
+    for(const n of SKS.filter(x=>x.active)){
+      const l=S.sk[n.id]||0, maxed=l>=n.max;
+      let btn;
+      if(!l) btn='<button class="buyBtn skBuy skUnlock" data-id="'+n.id+'" '+((S.sp<n.base)?'disabled':'')+'>解放する<span class="c">'+n.base+' SP</span></button>';
+      else if(maxed) btn='<button class="buyBtn skBuy skDone" disabled>✔ MAX</button>';
+      else btn='<button class="buyBtn skBuy skUnlock" data-id="'+n.id+'" '+((S.sp<n.base)?'disabled':'')+'>Lv '+(l+1)+' にする<span class="c">'+n.base+' SP</span></button>';
+      h+='<div class="skNode'+(l?'':' locked')+'"><div class="uHead"><span class="uName act">'+n.n+'</span><span class="uLv">'+(n.max>1?'Lv '+l+' / '+n.max:(l?'解放済':'未解放'))+'</span></div>'
+        +'<div class="uEff">'+n.d+'</div>'
+        +btn+'</div>';
     }
     const tot=skTotal(), rCost=respecCost();
     h+='<div class="secTitle">振り直し</div>'
@@ -2358,7 +2363,15 @@ const rn=REG(S.region).name;
   const bossFloor=rf===10;
   [...els.dots.children].forEach((d,i)=>d.classList.toggle('on',bossFloor?true:i<S.kills));
   const showCh=bossFloor&&!mob&&!(S.bossCleared&&S.bossCleared[S.region])&&!bossChallengeActive;
-  ['bossChallengeWrap','bossChallengeWrapA'].forEach(function(id){ const el=document.getElementById(id); if(el) el.style.display=showCh?'':'none'; });
+  ['bossChallengeWrap','bossChallengeWrapA'].forEach(function(id){
+    const el=document.getElementById(id); if(!el) return;
+    el.style.display=showCh?'':'none';
+    if(showCh){
+      const b=el.querySelector('button'); if(!b) return;
+      const req=bossSpReq(), have=spInvested();
+      b.textContent=req>0?'⚔ ボスに挑戦（スキル投資 応募必要: '+req+' SP / 現在 '+have+' SP'+(have<req?' — あと '+(req-have)+' SP':' ✓')+'）':'⚔ ボスに挑戦';
+    }
+  });
 
   // skill
   const cd=S.skillCd||0;
