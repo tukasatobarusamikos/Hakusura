@@ -1002,7 +1002,9 @@ function killMob(){
   S.gold+=g; S.totalGold+=g; gainGps(g);
   S.totalKills++;
   { const mRate=(1+0.25*(S.up.mastery||0));
-    const raw=(m.boss?((S.bossMasteryDone&&S.bossMasteryDone[S.region])?0:3):(m.M.lucky?2:1))*mRate;
+    // 敵の強さ補正: ステージHP倍率の平方根（1:×1.0 / 2:×1.73 / 3:×2.45 / 4:×3.0 / 5:×3.16）…ステージ1基準で1.0
+    const strMul=Math.sqrt(MOB_HPM[stageIdx(S.floor)])/Math.sqrt(MOB_HPM[0]);
+    const raw=(m.boss?((S.bossMasteryDone&&S.bossMasteryDone[S.region])?0:3):(m.M.lucky?2:1))*strMul*mRate;
     S.masteryAcc=(S.masteryAcc||0)+raw;
     const mp=Math.floor(S.masteryAcc);
     if(mp>=1){ S.masteryAcc-=mp; }
@@ -2411,10 +2413,14 @@ function renderTab(){
       return;
     }
     const can=(S.souls||0)>=1;
+    const mRef=UPS.reduce((a,u)=>a+(Math.pow(2,S.up[u.id]||0)-1),0);
+    const spRef=Object.values(S.sk).reduce((a,b)=>a+(b||0),0);
     tabContent.innerHTML=
       '<div class="secTitle">転生とは</div>'
       +'<p style="font-size:12px;color:var(--ink-dim)">ボス討伐で手に入る<b style="color:#ffd166">転生の魂</b>を <b>1つ</b>消費して、<b>強化レベルとスキルを全てリセット</b>する。<br>強化に使った熟練度と振り分けたSPは<b style="color:#9fe1ff">全て還元</b>される。装備・ゴールド・階層・レベルはそのまま。</p>'
       +'<div class="secTitle">転生の魂</div><div class="bigNum" style="color:#ffd166">'+(S.souls||0)+' 個</div>'
+      +'<div class="secTitle">転生で還元されるもの</div>'
+      +'<div style="font-size:13px;line-height:2;margin:4px 0 10px">熟練度： <b style="color:#9fe1ff">+'+fmt(mRef)+' ✦</b><br>スキルポイント： <b style="color:#9fe1ff">+'+fmt(spRef)+' SP</b></div>'
       +'<div class="secTitle">転生回数</div><div class="bigNum">'+S.rebirths+' 回</div>'
       +'<button class="rebirthBtn" id="rebirthBtn" '+(can?'':'disabled')+'>'+(can?'転生する（-魂 1）':'転生の魂がない（ボス討伐で入手）')+'</button>';
     const rb=$('#rebirthBtn');
@@ -2612,7 +2618,7 @@ const rn=REG(S.region).name;
     const big=tabContent.querySelectorAll('.bigNum');
     if(big.length>=2){ big[0].textContent=(S.souls||0)+' 個'; big[1].textContent=S.rebirths+' 回'; }
     const bar=tabContent.querySelector('.bar i'); if(bar) bar.style.width=Math.min(100,(S.souls||0)*100)+'%';
-    const btn=$('#rebirthBtn'); if(btn){ btn.disabled=(S.souls||0)<1; btn.textContent=btn.disabled?'熟練度が足りない（100✦）':'転生する（-100✦）'; }
+    const btn=$('#rebirthBtn'); if(btn){ btn.disabled=(S.souls||0)<1; btn.textContent=btn.disabled?'転生の魂がない（ボス討伐で入手）':'転生する（-魂 1）'; }
   }
   if(curTab==='rec'){
     const cells=tabContent.querySelectorAll('.recCell b');
