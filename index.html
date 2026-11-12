@@ -566,6 +566,9 @@ function goldPerKill(){ return Math.max(1,Math.ceil(1*Math.pow(1.18,S.floor-1)*g
 function maxHp(){ return Math.floor((60+eqSum('hp'))*(1+0.06*(S.up.vit||0))*(1+0.08*(S.sk.hp||0))); }
 function heroDef(){ return Math.floor((eqSum('def')+Math.floor(S.level/2))*(1+0.08*(S.up.def||0))); }
 function mobAtk(f,g){ return Math.max(1,5*Math.pow(1.235,f-1)*g*(1+0.04*S.kills)); }
+// ステージ別 HP倍率（雑魚 / ボス）
+const MOB_HPM=[3,10,20,30,50], BOSS_HPM=[100,200,300,400,600];
+function stageIdx(f){ return clamp(Math.floor((f-1)/10),0,4); }
 function dmgCut(){ const atk=mobAtk(S.floor,1.0); return clamp(heroDef()*0.6/atk,0,0.6); }
 
 /* ================= items ================= */
@@ -944,7 +947,7 @@ let mob=null, bossT=0, bossChallengeActive=false;
 function startBossChallenge(){
   bossChallengeActive=true; fieldBgmStop(); bossBgmStart();
   const rg=REG(S.region), key=rg.boss, M=MOBS[key], f=S.floor;
-  const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*(M.boss?50:1));
+  const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*BOSS_HPM[stageIdx(f)]);
   mob={key,M,el:MOB_EL[key],boss:true,max:hp,hp,hurt:0,born:0,atkT:2.2*rand(0.9,1.3),lunge:0,dying:0};
   bossT=BOSS_TIME; $('#bossTimer').style.display='block';
   ['bossChallengeWrap','bossChallengeWrapA'].forEach(function(id){ const el=document.getElementById(id); if(el) el.style.display='none'; });
@@ -957,7 +960,8 @@ function spawnMob(){
   else if(Math.random()<0.004){ key=choice(['luckyEq','luckyGd','luckySk']); }
   else key=choice(rg.pool);
   const M=MOBS[key];
-  const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*(M.boss?50:3));
+  const si=stageIdx(f), hpm=M.boss?BOSS_HPM[si]:MOB_HPM[si];
+  const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*hpm);
   mob={key,M,el:MOB_EL[key],boss:!!M.boss,max:hp,hp,hurt:0,born:0,atkT:M.aI*rand(0.9,1.3),lunge:0,dying:0};
   if(mob.boss){
     bossT=BOSS_TIME; $('#bossTimer').style.display='block';
@@ -1129,7 +1133,16 @@ function tickCombat(dt){
       ringFx(0.26,0.62,'#e5484d');
       if(hero.hp<=0){
         hero.hp=0; hero.dead=true; hero.deadT=3.5;
-        log('力尽きた… 3秒後に復帰する（この階層の討伐数はリセット）','warn');
+        const bossFloor=regFloor(S.floor)===10;
+        if(mob.boss&&bossFloor){
+          const cur=S.floor; S.floor=S.floor-regFloor(S.floor)+6; S.kills=0;
+          log('ボスに力尽きた… ステージの6Fに戻される（討伐数リセット）','warn');
+          $('#bossTimer').style.display='none';
+          if(bossChallengeActive){ bossChallengeActive=false; bossBgmStop(); }
+          setTimeout(()=>{ if(cur!==S.floor) log('…挑戦者は '+S.region+'-'+regFloor(S.floor)+'F の地へ','sys'); },600);
+        } else {
+          log('力尽きた… 3秒後に復帰する（この階層の討伐数はリセット）','warn');
+        }
         S.kills=0; shake=14; sfx.die();
         if(mob.key==='luckyEq'){ log('装備魔神はお前が倒れたのを見て逃げ去った…','warn'); $('#bossTimer').style.display='none'; mob=null; bossT=0; }
       }
