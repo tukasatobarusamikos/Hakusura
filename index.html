@@ -391,14 +391,14 @@ body{
       <div class="purse lvPurse"><span class="lbl">Lv</span><b id="lvVal">1</b>
         <span class="xpWrap"><span class="xpFill" id="xpFill"></span><span class="xpTxt" id="xpTxt"></span></span></div>
       <div class="purse"><span class="lbl">所持金</span><b id="goldVal">0</b></div>
-      <button id="sndBtn" type="button">音 ON</button>
+      <button id="sndBtn" type="button">BGM ON</button><button id="seBtn" type="button">SE ON</button>
     </div>
   </header>
   <div id="mobileBar">
     <div class="mbItem lv"><span>Lv</span><b id="mbLv">1</b><span class="xpWrap"><span class="xpFill" id="mbXpFill"></span><span class="xpTxt" id="mbXpTxt"></span></span></div>
     <div class="mbItem"><span>💰</span><b id="mbGold">0</b></div>
     <div class="mbItem"><span>✦</span><b id="mbMast" style="color:#9fe1ff">0</b></div>
-    <button id="mbSnd" type="button">🔊</button>
+    <button id="mbSnd" type="button">🔊</button><button id="mbSe" type="button">🔔</button>
   </div>
 
   <div id="main">
@@ -554,7 +554,7 @@ function save(){ if(wiped) return; S.lastSeen=Date.now(); try{ localStorage.setI
 
 /* ================= derived ================= */
 function eqSum(k){ let t=0; for(const s in S.equip){ const it=S.equip[s]; if(it) t+=(it[k]||0); } return t; }
-function atkVal(){ return Math.max(1,Math.floor((5+3*S.up.atk+eqSum('atk'))*(1+0.06*(S.sk.atk||0)))); }
+function atkVal(){ return Math.max(1,Math.floor((5+2*S.up.atk+eqSum('atk'))*(1+0.06*(S.sk.atk||0)))); }
 function atkIvl(){ return Math.max(0.22,1.1*Math.pow(0.96,S.up.spd)/(1+0.03*(S.sk.spd||0))); }
 function critC(){ return Math.min(0.75,0.05+0.01*S.up.crit+0.02*(S.sk.crit||0)+eqSum('crit')/100); }
 function critM(){ return 1.5+0.15*S.up.critd+0.12*(S.sk.critd||0)+eqSum('critd')/100; }
@@ -578,10 +578,24 @@ const RARITY=[
   {n:'レジェンド',cls:'c3',m:6.5,w:1},
 ];
 const PFX=[
-  ['古びた','旅人の','鍛冶屋の'],
-  ['鋼の','銀の','紋章入りの','狼の'],
-  ['竜鱗の','ルーンの','深淵の','月影の'],
-  ['星砕きの','竜殺しの','王者の','終焉の'],
+  ['古びた','旅人の','鍛冶屋の','錆びた','見習いの'],
+  ['鋼の','銀の','紋章入りの','狼の','狩人の','破風の'],
+  ['竜鱗の','ルーンの','深淵の','月影の','焔蜥の','嵐呼びの','黒檀の'],
+  ['星砕きの','竜殺しの','王者の','終焉の','冥界渡りの','暁天の'],
+];
+// レア度ごとの「銘」— 高レアほど独創的な二つ名が付く
+const EPITHET=[
+  ['',''],
+  ['・牙','・爪','・咆哮','・疾風'],
+  ['・狼煙','・燼','・氷華','・雷鳴','・影縫','・紅殻'],
+  ['・天焦がし','・地割れ','・宵闇','・潮鳴り','・灰塵','・伏竜','・刻裂'],
+];
+// フレーバー文（ドロップ時に1行の物語として見える）
+const FLAVOR=[
+  ['誰かの日々の使いに過ぎない。','槍傷が数え切れない。','まだ名は呼ばれていない。'],
+  ['鍛えられし手が、確かな熱を残した。','かつて狼群を切り裂いた。','紋章は古い盟約を語る。'],
+  ['竜すら腰を引く気配を纏っている。','月の満ち欠けで切れ味が変わるという。','深淵を覗いた者がだけが持てる。'],
+  ['一振りで星を落としたという伝説。','これで竜は二度と空を飛ばない。','終わりを告げるために造られた。'],
 ];
 const NAMES={
   weapon:['ソード','ツルギ','大剣','双刃','戦斧','魔剣','レイピア','サーベル','シミター','片手斧','槍','ハンマー','メイス','薙刀','太刀','打刀','曲刀','弯刀','棘剣','鉄鞭','刃杖','克剣','村正','グレイソード','クレイモア','ブロードソード','短剣','戦鎌','牙剣','魔槍'],
@@ -603,15 +617,17 @@ function makeItem(fl,minR){
   let rI=rollRarity();
   if(minR&&rI<minR) rI=minR+(Math.random()<0.3&&minR<3?1:0);
   const slot=choice(SLOTS)[0], R=RARITY[rI];
-  const it={slot,r:rI,name:choice(PFX[rI])+choice(NAMES[slot]),lv:fl,atk:0,crit:0,critd:0,gold:0,hp:0,def:0,plus:0};
+  const it={slot,r:rI,name:choice(PFX[rI])+choice(NAMES[slot])+choice(EPITHET[rI]),lv:fl,atk:0,crit:0,critd:0,gold:0,hp:0,def:0,plus:0};
+  if(rI>=2) it.flavor=choice(FLAVOR[rI]);
+  if(rI===3) it.serial='No.'+(1000+Math.floor(Math.random()*9000));
   if(slot==='weapon'||slot==='armor'||slot==='ring'||slot==='amulet') it.el=choice(EL_KEYS.filter(k=>k!=='ice'));
-  const scale=3*Math.pow(1.22,fl-1)*R.m;
-  it.atk=Math.max(1,Math.floor(scale*rand(0.75,1.25)*(slot==='weapon'?1:0.35)));
-  if(slot==='armor'){ it.hp=Math.floor(scale*rand(2.2,3.2)); it.def=Math.floor(scale*rand(0.5,0.9)); }
-  if(slot==='amulet') it.hp=Math.floor(scale*rand(1.2,2.0));
-  if(slot==='ring') it.def=Math.floor(scale*rand(0.3,0.6));
+  const scale=6*Math.pow(1.30,fl-1)*R.m;
+  it.atk=Math.max(1,Math.floor(scale*rand(0.9,1.4)*(slot==='weapon'?1:0.25)));
+  if(slot==='armor'){ it.hp=Math.floor(scale*rand(3.2,4.5)); it.def=Math.floor(scale*rand(0.9,1.4)); }
+  if(slot==='amulet') it.hp=Math.floor(scale*rand(2.0,3.0));
+  if(slot==='ring'){ it.def=Math.floor(scale*rand(0.2,0.4)); it.crit+=+(rand(1.0,2.5)).toFixed(1); }
   const pool=['crit','critd','gold'];
-  for(let i=0;i<rI;i++){
+  for(let i=0;i<rI+2;i++){
     const k=choice(pool);
     if(k==='crit') it.crit+=+(rand(1.5,4)*R.m).toFixed(1);
     else if(k==='critd') it.critd+=Math.floor(rand(6,14)*R.m);
@@ -646,6 +662,8 @@ function fuseEquip(k){
 function itemStats(it){
   const p=[];
   if(it.el) p.push('<span style="color:'+ELS[it.el].c+';font-weight:700">属性 '+ELS[it.el].n+'</span>');
+  if(it.flavor) p.push('<span style="color:#8a92a8;font-style:italic">「'+it.flavor+'」</span>');
+  if(it.serial) p.push('<span style="color:#ffd166;font-size:9px">'+it.serial+'</span>');
   if(it.atk) p.push('攻撃 <b>+'+fmt(it.atk)+'</b>');
   if(it.hp) p.push('HP <b>+'+fmt(it.hp)+'</b>');
   if(it.def) p.push('守備 <b>+'+fmt(it.def)+'</b>');
@@ -657,6 +675,7 @@ function itemStats(it){
 function dropItem(forced){
   const it=forced||makeItem(S.floor), R=RARITY[it.r];
   S.itemsFound++;
+  if(it.flavor) log(R.n+'「'+it.name+'」— '+it.flavor,'drop');
   if(S.autoEquip){
     const cur=S.equip[it.slot];
     if(!cur||it.score>cur.score){
@@ -925,8 +944,8 @@ let mob=null, bossT=0, bossChallengeActive=false;
 function startBossChallenge(){
   bossChallengeActive=true; fieldBgmStop(); bossBgmStart();
   const rg=REG(S.region), key=rg.boss, M=MOBS[key], f=S.floor;
-  const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*(M.boss?9:1));
-  mob={key,M,el:MOB_EL[key],boss:true,max:hp,hp,hurt:0,born:0,atkT:3.0*rand(0.9,1.3),lunge:0,dying:0};
+  const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*(M.boss?50:1));
+  mob={key,M,el:MOB_EL[key],boss:true,max:hp,hp,hurt:0,born:0,atkT:2.2*rand(0.9,1.3),lunge:0,dying:0};
   bossT=BOSS_TIME; $('#bossTimer').style.display='block';
   ['bossChallengeWrap','bossChallengeWrapA'].forEach(function(id){ const el=document.getElementById(id); if(el) el.style.display='none'; });
   log('⚠ '+M.name+'（'+ELS[MOB_EL[key]].n+'属性）に挑んだ！','warn'); sfx.boss(); shake=Math.max(shake,9); ringFx(0.72,0.62,'#e5484d');
@@ -938,7 +957,7 @@ function spawnMob(){
   else if(Math.random()<0.004){ key=choice(['luckyEq','luckyGd','luckySk']); }
   else key=choice(rg.pool);
   const M=MOBS[key];
-  const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*(M.boss?12:1));
+  const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*(M.boss?50:3));
   mob={key,M,el:MOB_EL[key],boss:!!M.boss,max:hp,hp,hurt:0,born:0,atkT:M.aI*rand(0.9,1.3),lunge:0,dying:0};
   if(mob.boss){
     bossT=BOSS_TIME; $('#bossTimer').style.display='block';
@@ -1098,7 +1117,7 @@ function tickCombat(dt){
     if(mob.atkT<=0){
       mob.atkT=mob.M.aI*rand(0.85,1.2);
       mob.lunge=1;
-      let d=mobAtk(S.floor,mob.M.d)*(mob.boss?1.5:1);
+      let d=mobAtk(S.floor,mob.M.d)*(mob.boss?2.2:1);
       // elemental defense: count matching/vulnerable pieces across equip slots
       let eCnt=0;
       for(const [k] of SLOTS){ const eq=S.equip[k]; if(eq&&eq.el){ if(EL_ADV[mob.el]===eq.el) eCnt++; else if(EL_ADV[eq.el]===mob.el) eCnt--; } }
@@ -1207,14 +1226,14 @@ function noise(){
   return noiseBuf;
 }
 function beep(f0,f1,dur,type,vol){
-  if(S.muted) return; const a=ac(); if(!a) return;
+  if(S.seMuted) return; const a=ac(); if(!a) return;
   const o=a.createOscillator(),g=a.createGain(),t=a.currentTime;
   o.type=type; o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(Math.max(1,f1),t+dur);
   g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
   o.connect(g).connect(a.destination); o.start(t); o.stop(t+dur);
 }
 function hiss(dur,vol,f,q){
-  if(S.muted) return; const a=ac(); if(!a||!noise()) return;
+  if(S.seMuted) return; const a=ac(); if(!a||!noise()) return;
   const s=a.createBufferSource(); s.buffer=noiseBuf;
   const bp=a.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=f; bp.Q.value=q||0.8;
   const g=a.createGain(); const tt=a.currentTime;
@@ -2580,7 +2599,7 @@ cv.addEventListener('touchstart',e=>e.preventDefault(),{passive:false});
 els.skill.addEventListener('click',()=>castSkill());
 els.fire.addEventListener('click',()=>castFire());
 $('#autoBossBtn').addEventListener('click',()=>{ S.autoBoss=!S.autoBoss; const b=$('#autoBossBtn'); b.setAttribute('aria-pressed',String(S.autoBoss)); b.textContent=S.autoBoss?'ボス自動 ON':'ボス自動 OFF'; b.classList.toggle('on',S.autoBoss); save(); });
-$('#mbSnd').addEventListener('click',()=>{ S.muted=!S.muted; if(!S.muted) S.bgmAsk=false; if(S.muted){ bossBgmStop(); fieldBgmStop(); } else if(bossChallengeActive) bossBgmStart(); else fieldBgmStart(); $('#mbSnd').textContent=S.muted?'\u{1F507}':'\u{1F50A}'; if(!S.muted) sfx.coin(); save(); });
+$('#mbSnd').addEventListener('click',()=>{ S.muted=!S.muted; if(!S.muted){ S.bgmAsk=false; window.__bgmApproved=true; } if(S.muted){ bossBgmStop(); fieldBgmStop(); } else if(bossChallengeActive) bossBgmStart(); else fieldBgmStart(); setSndLabels(); if(!S.muted) sfx.coin(); save(); });
 els.pot.addEventListener('click',()=>drinkPotion(false));
 function castSkill(){
   if((S.skillCd||0)>0||!mob||mob.dying>0) return;
@@ -2673,7 +2692,10 @@ if(!chB2){ chB2=document.createElement('button'); chB2.id='bossChallenge'; chB2.
     if(f && f!==cur){ S.floor=S.floor-cur+f; S.kills=0; mob=null; bossChallengeActive=false; $('#bossTimer').style.display='none'; save(); } });
 })();
 const regUpEl=$('#regUp'); if(regUpEl) regUpEl.addEventListener('click',()=>gotoRegion(S.region+1));
-$('#sndBtn').addEventListener('click',()=>{ S.muted=!S.muted; if(!S.muted) S.bgmAsk=false; $('#sndBtn').textContent=S.muted?'音 OFF':'音 ON'; if(!S.muted) sfx.coin(); save(); });
+function setSndLabels(){ const sb=$('#sndBtn'); if(sb) sb.textContent=S.muted?'BGM OFF':'BGM ON'; const se=$('#seBtn'); if(se) se.textContent=S.seMuted?'SE OFF':'SE ON'; const mb=$('#mbSnd'); if(mb) mb.textContent=S.muted?'\u{1F507}':'\u{1F50A}'; const ms=$('#mbSe'); if(ms) ms.textContent=S.seMuted?'\u{1F515}':'\u{1F514}'; }
+$('#sndBtn').addEventListener('click',()=>{ S.muted=!S.muted; if(!S.muted){ S.bgmAsk=false; window.__bgmApproved=true; } if(S.muted){ bossBgmStop(); fieldBgmStop(); } else if(bossChallengeActive) bossBgmStart(); else fieldBgmStart(); setSndLabels(); save(); });
+$('#seBtn').addEventListener('click',()=>{ S.seMuted=!S.seMuted; setSndLabels(); if(!S.seMuted) sfx.coin(); save(); });
+$('#mbSe').addEventListener('click',()=>{ S.seMuted=!S.seMuted; setSndLabels(); if(!S.seMuted) sfx.coin(); save(); });
 const autoSkillBtn=$('#autoSkillBtn');
 autoSkillBtn.addEventListener('click',()=>{
   S.autoSkill=!S.autoSkill;
@@ -2708,12 +2730,12 @@ window.__bgmApproved=!!prev; if(prev&&S.muted) fieldBgmStop(); if(!prev){ // 初
     +'<button id="bgmNo" style="padding:10px 26px;border:1px solid #3a4158;background:#12141c;color:#8a92a8;border-radius:6px;font-size:13px;font-family:DotGothic16,monospace">鳴らさない</button>'
     +'</div>';
   document.body.appendChild(ov);
-  const done=bgmOn=>{ ov.remove(); window.__bgmApproved=bgmOn; S.bgmAsk=!bgmOn; if(!bgmOn){ S.muted=true; $('#sndBtn').textContent='音 OFF'; bossBgmStop(); fieldBgmStop(); } else { S.muted=false; $('#sndBtn').textContent='音 ON'; sfx.coin(); fieldBgmStart(); } const mb2=$('#mbSnd'); if(mb2) mb2.textContent=S.muted?'\u{1F507}':'\u{1F50A}'; save(); };
+  const done=bgmOn=>{ ov.remove(); window.__bgmApproved=bgmOn; S.bgmAsk=!bgmOn; if(!bgmOn){ S.muted=true; bossBgmStop(); fieldBgmStop(); } else { S.muted=false; sfx.coin(); fieldBgmStart(); } setSndLabels(); save(); };
   ov.querySelector('#bgmYes').addEventListener('click',()=>done(true));
   ov.querySelector('#bgmNo').addEventListener('click',()=>done(false));
 }
 
-if(S.muted){ $('#sndBtn').textContent='音 OFF'; const mb=$('#mbSnd'); if(mb) mb.textContent='\u{1F507}'; }
+setSndLabels();
 if(S.autoSkill){ autoSkillBtn.textContent='必殺技自動 ON'; autoSkillBtn.classList.add('on'); autoSkillBtn.setAttribute('aria-pressed','true'); }
 // offline progress
 if(prev&&S.gps>0){
