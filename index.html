@@ -2799,13 +2799,13 @@ if(S.autoSkill){ autoSkillBtn.textContent='必殺技自動 ON'; autoSkillBtn.cla
 if(prev&&S.gps>0){
   const elapsed=Math.min(OFFLINE_CAP,(Date.now()-(prev.lastSeen||Date.now()))/1000);
   if(elapsed>90){
-    const g=Math.floor(S.gps*elapsed*OFFLINE_EFF);
-    if(g>0){
-      S.gold+=g; S.totalGold+=g;
-      const kills=Math.max(1,Math.floor(g/Math.max(1,goldPerKill())));
+    const kills=Math.max(1,Math.floor((S.gps/Math.max(1,goldPerKill()))*elapsed*OFFLINE_EFF));
+    const mGain=Math.max(1,Math.floor(kills*(1+0.25*(S.up.mastery||0))*OFFLINE_EFF));
+    if(mGain>0){
+      S.mastery+=mGain; S.totalMastery+=mGain;
       S.totalKills+=kills;
       const hrs=fmtTime(elapsed);
-      setTimeout(()=>modal('おかえりなさい','冒険者が'+hrs+'の間、ひとりで狩りを続けていた。\n\n獲得ゴールド：<b>+'+fmt(g)+' G</b>\n撃破数： <b>約 '+fmt(kills)+' 体</b>\n（オフライン効率 60%）','冒険に戻る',null,null),300);
+      setTimeout(()=>modal('おかえりなさい','冒険者が'+hrs+'の間、ひとりで狩りを続けていた。\n\n獲得熟練度：<b style="color:#9fe1ff">+'+fmt(mGain)+' ✦</b>\n撃破数： <b>約 '+fmt(kills)+' 体</b>\n（オフライン中は熟練度のみ獲得・効率60%。装備ドロップはありません）','冒険に戻る',null,null),300);
     }
   }
 }
