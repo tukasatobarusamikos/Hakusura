@@ -572,7 +572,7 @@ function maxHp(){ return Math.floor((60+eqSum('hp'))*(1+0.06*(S.up.vit||0))*(1+0
 function heroDef(){ return Math.floor((eqSum('def')+Math.floor(S.level/2))*(1+0.08*(S.up.def||0))); }
 function mobAtk(f,g){ return Math.max(1,5*Math.pow(1.235,f-1)*g*(1+0.04*S.kills)); }
 // ステージ別 HP倍率（雑魚 / ボス）
-const MOB_HPM=[3,10,20,30,50,39682], BOSS_HPM=[100,200,300,400,600,748341];
+const MOB_HPM=[3,10,20,30,50,1984], BOSS_HPM=[100,200,300,400,600,37417];
 function stageIdx(f){ return clamp(Math.floor((f-1)/10),0,5); }
 function dmgCut(){ const atk=mobAtk(S.floor,1.0); return clamp(heroDef()*0.6/atk,0,0.6); }
 
