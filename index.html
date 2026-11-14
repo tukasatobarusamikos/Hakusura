@@ -971,7 +971,7 @@ function startBossChallenge(){
   const rg=REG(S.region), key=rg.boss, M=MOBS[key], f=S.floor;
   const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*BOSS_HPM[stageIdx(f)]);
   mob={key,M,el:MOB_EL[key],boss:true,max:hp,hp,hurt:0,born:0,atkT:2.2*rand(0.9,1.3),lunge:0,dying:0};
-  bossT=BOSS_TIME; $('#bossTimer').style.display='block';
+  bossT=(S.region>=6?BOSS_TIME*10:BOSS_TIME); $('#bossTimer').style.display='block';
   ['bossChallengeWrap','bossChallengeWrapA'].forEach(function(id){ const el=document.getElementById(id); if(el) el.style.display='none'; });
   log('⚠ '+M.name+'（'+ELS[MOB_EL[key]].n+'属性）に挑んだ！','warn'); sfx.boss(); shake=Math.max(shake,9); ringFx(0.72,0.62,'#e5484d');
 }
@@ -1052,6 +1052,12 @@ function killMob(){
         'ステージ'+S.region+'「'+REG(S.region).name+'」のボスを倒した！\n\n新しいステージが解放されました：\n<b style="color:var(--gold);font-size:16px">ステージ'+nxt+'「'+REG(nxt).name+'」</b>\n\n次のステージへ進みますか？',
         'ステージ'+nxt+'へ進む',()=>{ gotoRegion(nxt); showSkToast('ステージ'+nxt+'「'+REG(nxt).name+'」へ移動！'); },
         'このステージに残る');
+    }else if(m.__replay||S.bossCleared[S.region]){
+      const rg=REG(S.region);
+      modal('勝利！',
+        'ステージ'+S.region+'「'+rg.name+'」のボス『'+M.name+'』を倒した！\n\n（再戦のため新しいステージ解放はありません）',
+        'このステージに残る');
+      log('ステージ'+S.region+'のボスを再撃破！','gold');
     }else{
       log('ステージ'+S.region+'「'+REG(S.region).name+'」のボスを再撃破！','gold');
     }
@@ -1170,7 +1176,7 @@ function tickCombat(dt){
       }
     }
   }
-  const bossWait=regFloor(S.floor)===10&&!(S.bossCleared&&S.bossCleared[S.region])&&!bossChallengeActive&&!(mob&&mob.boss);
+  const bossWait=regFloor(S.floor)===10&&!bossChallengeActive&&!(mob&&mob.boss);
   if(!mob&&!bossWait) spawnMob();
   // burning damage
   if(mob&&mob.burn&&mob.burn.t>0&&!hero.dead){
