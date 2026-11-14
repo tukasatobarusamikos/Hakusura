@@ -961,6 +961,11 @@ const MOBS={
 function biome(){ return REG(S.region); }
 function regFloor(f){ return (f-1)%10+1; }
 let mob=null, bossT=0, bossChallengeActive=false;
+function startBossReplay(){
+  // 記録タブからの再戦（報酬なし）: 通常ボス戦と同じだが撃破時の特典を抑制するフラグを立てる
+  startBossChallenge();
+  if(mob) mob.__replay=true;
+}
 function startBossChallenge(){
   bossChallengeActive=true; fieldBgmStop(); bossBgmStart();
   const rg=REG(S.region), key=rg.boss, M=MOBS[key], f=S.floor;
@@ -1025,7 +1030,7 @@ function killMob(){
     S.masteryAcc=(S.masteryAcc||0)+raw;
     const mp=Math.floor(S.masteryAcc);
     if(mp>=1){ S.masteryAcc-=mp; }
-    if(mp>0){ S.mastery+=mp; S.totalMastery+=mp; if(m.boss){ S.bossMasteryDone[S.region]=true; fx.push({k:'t',str:'熟練度 +'+mp,col:'#9fe1ff',x:0.72,y:0.30,v:0.05,life:1}); } else fx.push({k:'t',str:'熟練度 +'+mp,col:'#9fe1ff',x:0.72,y:0.30,v:0.05,life:1}); } }
+    if(mp>0&&!m.__replay){ S.mastery+=mp; S.totalMastery+=mp; if(m.boss){ S.bossMasteryDone[S.region]=true; fx.push({k:'t',str:'熟練度 +'+mp,col:'#9fe1ff',x:0.72,y:0.30,v:0.05,life:1}); } else fx.push({k:'t',str:'熟練度 +'+mp,col:'#9fe1ff',x:0.72,y:0.30,v:0.05,life:1}); } }
   coinFx(m.boss?26:ri(5,9));
   sfx.coin(); sfx.die();
   if(m.boss||dropC()>Math.random()) dropItem();
@@ -1035,7 +1040,8 @@ function killMob(){
   }
   if(S.sk.execute) S.nextCrit=true;
   if(m.boss){
-    S.souls++; showSkToast('転生の魂 +1'); log('転生の魂を手に入れた（所持 '+S.souls+' 個）','legend');
+    if(!m.__replay){ S.souls++; showSkToast('転生の魂 +1'); log('転生の魂を手に入れた（所持 '+S.souls+' 個）','legend'); }
+    else { log('再戦のため、特典（転生の魂・熟練度ボーナス）はない。','sys'); }
     S.kills=0; S.bossCleared[S.region]=true; bossChallengeActive=false; bossT=0; bossBgmStop(); fieldBgmStart(); S.runFloor=Math.max(S.runFloor,S.floor); S.bestFloor=Math.max(S.bestFloor,S.floor);
     $('#bossTimer').style.display='none';
     if(S.region===S.deepestRegion&&S.deepestRegion<6){
@@ -2454,9 +2460,27 @@ function renderTab(){
       +rec('バックログ',S.bag.length+' / '+BAG_MAX)
       +rec('攻略ステージ',S.deepestRegion+' / 6')
       +'</div>'
+      +(function(){
+        let h='<div class="secTitle" style="margin-top:14px">ボス再戦（報酬なし）</div>';
+        let any=false;
+        for(let r=1;r<=6;r++){
+          if(!S.bossCleared||!S.bossCleared[r]) continue;
+          const rg=REG(r); if(!rg||!rg.boss) continue;
+          const M=MOBS[rg.boss]; any=true;
+          h+='<button class="rebirthBtn" data-bossr="'+r+'" style="margin:6px 0;padding:10px 14px;font-size:13px">⚔ ステージ'+r+'「'+rg.name+'」 '+M.name+' に再戦</button>';
+        }
+        if(!any) h+='<div style="font-size:11px;color:var(--ink-faint)">討伐済みのボスはまだいません</div>';
+        return h;
+      })()
       +'<details style="margin-top:10px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:8px 12px"><summary style="cursor:pointer;color:#ffd166;font-weight:700;font-size:12px">ヘルプ（遊び方）</summary>'+HELP_HTML+'</details>'
       +'<button class="dangerBtn" id="wipeBtn">セーブデータを削除する</button>';
     $('#wipeBtn').addEventListener('click',askWipe);
+    tabContent.querySelectorAll('[data-bossr]').forEach(b=>b.addEventListener('click',()=>{
+      const r=+b.dataset.bossr;
+      S.__replayBoss=true;
+      if(S.region!==r){ gotoRegion(r); setTimeout(()=>{ if(S.region===r){ S.floor=(r-1)*10+9; startBossReplay(); } },50); }
+      else { S.floor=(r-1)*10+9; startBossReplay(); }
+    }));
   }
 }
 function rec(l,v){ return '<div class="recCell"><span>'+l+'</span><b>'+v+'</b></div>'; }
