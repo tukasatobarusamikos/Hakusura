@@ -2746,7 +2746,7 @@ window.addEventListener('keydown',e=>{
   if(e.code==='Space'&&!e.repeat&&curTab!=='up'){ e.preventDefault(); els.skill.click(); }
 });
 function gotoRegion(n){
-  n=clamp(n,1,5);
+  n=clamp(n,1,6);
   if(n>S.deepestRegion||n===S.region) return;
   S.region=n; S.floor=(n-1)*10+1; S.kills=0; mob=null; bossChallengeActive=false; bossBgmStop(); fieldBgmStart(); S.deepFloor[n]=Math.max(S.deepFloor[n]||1,regFloor(S.floor));
   $('#bossTimer').style.display='none';
