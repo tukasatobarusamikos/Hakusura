@@ -993,7 +993,7 @@ function spawnMob(){
   else if(Math.random()<0.004){ key=choice(['luckyEq','luckyGd','luckySk']); }
   else key=choice(rg.pool);
   const M=MOBS[key];
-  const si=stageIdx(f), hpm=M.boss?BOSS_HPM[si]:MOB_HPM[si];
+  const si=stageIdx(f), hpm=M.boss?BOSS_HPM[si]:(M.lucky?MOB_HPM[0]:MOB_HPM[si]); // 魔人は常にステージ1基準のHP(出現階層で硬化しない)
   let hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*hpm);
   if(!isFinite(hp)||hp<=0) hp=Math.floor(12*Math.pow(1.26,f-1)*M.hp+10);
   const killsF=isFinite(S.kills)?S.kills:0;
