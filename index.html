@@ -536,6 +536,8 @@ function load(){
     S.autoEquip=!!d.autoEquip; S.autoSkill=!!d.autoSkill; S.autoEquipUnlocked=!!d.autoEquipUnlocked;
     S.bgmAsk=!!d.bgmAsk; S.potions=d.potions||0; S.sp=d.sp||0; S.charId=d.charId||0; S.potionAutoUnlocked=!!d.potionAutoUnlocked; S.potionAuto=!!d.potionAuto; S.upResetN=d.upResetN||0; S.mastery=d.mastery||0; S.totalMastery=d.totalMastery||0; S.bossMasteryDone=d.bossMasteryDone||{}; S.shopUnlocked=!!d.shopUnlocked; S.rebirthUnlocked=!!d.rebirthUnlocked;
     S.region=d.region||1; S.deepestRegion=d.deepestRegion||S.region;
+    // 旧セーブ移行: ステージ5のボス倒済みなら深淵の扉(6)を自動解放
+    if(d.bossCleared&&d.bossCleared['5']&&S.deepestRegion<6) S.deepestRegion=6;
     S.deepFloor=Object.assign({1:1},d.deepFloor||{});
     for(let r=1;r<S.deepestRegion;r++) S.deepFloor[r]=10;
     S.deepFloor[S.region]=Math.max(S.deepFloor[S.region]||1,regFloor(S.floor||1));
