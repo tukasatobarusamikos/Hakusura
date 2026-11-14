@@ -2601,10 +2601,14 @@ const rn=REG(S.region).name;
   }
   const bossFloor=rf===10;
   [...els.dots.children].forEach((d,i)=>d.classList.toggle('on',bossFloor?true:i<S.kills));
-  const showCh=bossFloor&&!mob&&!(S.bossCleared&&S.bossCleared[S.region])&&!bossChallengeActive;
+  const bossDone=S.bossCleared&&S.bossCleared[S.region];
+  const showCh=bossFloor&&!mob&&!bossChallengeActive;
   ['bossChallengeWrap','bossChallengeWrapA'].forEach(function(id){
     const el=document.getElementById(id); if(!el) return;
     el.style.display=showCh?'':'none';
+    if(showCh){ const c=document.getElementById('bossChallenge'), ca=document.getElementById('bossChallengeA');
+      const t=bossDone?'⚔ ボスに再戦':'⚔ ボスに挑戦';
+      if(c) c.textContent=t; if(ca) ca.textContent=t; }
   });
 
   // skill
