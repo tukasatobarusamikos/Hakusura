@@ -536,6 +536,15 @@ function load(){
     for(const b of S.bag){ if(!b.id) b.id=ITEM_UID++; }
     ITEM_UID=Math.max(1,...S.bag.map(b=>b.id||0),ITEM_UID);
     S.autoEquip=!!d.autoEquip; S.autoSkill=!!d.autoSkill; S.autoEquipUnlocked=!!d.autoEquipUnlocked;
+    // ---- save sanitize: 壊れた値を自動修復(敵が見えない/進まない不具合の防御) ----
+    const _num=(v,fb)=>(typeof v==='number'&&isFinite(v))?v:fb;
+    ['gold','mastery','totalMastery','totalKills','totalGold','level','sp','souls','rebirths','bestFloor','bestDmg','playSec','itemsFound','potions'].forEach(k=>{ S[k]=_num(S[k],0); });
+    S.floor=_num(S.floor,1); S.region=clamp(Math.round(_num(S.region,1)),1,6); S.deepestRegion=clamp(Math.round(_num(S.deepestRegion,1)),1,6);
+    if(S.floor>60) S.floor=60; if(S.kills<0||!isFinite(S.kills)) S.kills=0;
+    S.masteryAcc=_num(S.masteryAcc,0);
+    if(S.equip){ for(const k in S.equip){ const it=S.equip[k]; if(it&&(typeof it.atk!=='number'||!isFinite(it.atk))) it.atk=0; if(it&&(typeof it.def!=='number'||!isFinite(it.def))) it.def=0; if(it&&(typeof it.hp!=='number'||!isFinite(it.hp))) it.hp=0; if(it&&typeof it.name!=='string') it.name='異なる時代の装備'; } }
+    if(S.up){ for(const k in S.up){ S.up[k]=_num(S.up[k],0); } }
+    if(S.sk){ for(const k in S.sk){ S.sk[k]=_num(S.sk[k],0); } }
     S.bgmAsk=!!d.bgmAsk; S.potions=d.potions||0; S.sp=d.sp||0; S.charId=d.charId||0; S.potionAutoUnlocked=!!d.potionAutoUnlocked; S.potionAuto=!!d.potionAuto; S.upResetN=d.upResetN||0; S.mastery=d.mastery||0; S.totalMastery=d.totalMastery||0; S.bossMasteryDone=d.bossMasteryDone||{}; S.shopUnlocked=!!d.shopUnlocked; S.rebirthUnlocked=!!d.rebirthUnlocked;
     S.region=d.region||1; S.deepestRegion=d.deepestRegion||S.region;
     // 旧セーブ移行: ステージ5のボス倒済みなら深淵の扉(6)を自動解放
@@ -985,10 +994,14 @@ function spawnMob(){
   else key=choice(rg.pool);
   const M=MOBS[key];
   const si=stageIdx(f), hpm=M.boss?BOSS_HPM[si]:MOB_HPM[si];
-  const hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*hpm);
+  let hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*S.kills)*M.hp*hpm);
+  if(!isFinite(hp)||hp<=0) hp=Math.floor(12*Math.pow(1.26,f-1)*M.hp+10);
+  const killsF=isFinite(S.kills)?S.kills:0;
+  hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*killsF)*M.hp*hpm);
+  if(!isFinite(hp)||hp<=0) hp=100;
   mob={key,M,el:MOB_EL[key],boss:!!M.boss,max:hp,hp,hurt:0,born:0,atkT:M.aI*rand(0.9,1.3),lunge:0,dying:0};
   if(mob.boss){
-    bossT=BOSS_TIME; $('#bossTimer').style.display='block';
+    bossT=(S.region>=6?BOSS_TIME*10:BOSS_TIME); $('#bossTimer').style.display='block';
     const bl=document.querySelector('#bossTimer .btLabel'); if(bl) bl.textContent='BOSS';
     log('⚠ '+M.name+'（'+ELS[MOB_EL[key]].n+'属性）が立ちはだかる！','warn'); sfx.boss(); shake=Math.max(shake,9); ringFx(0.72,0.62,'#e5484d');
   }else if(M.lucky){
