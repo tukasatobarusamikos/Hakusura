@@ -2063,7 +2063,7 @@ function drawMob(t){
   mg.scale(sq,1/sq*1.02);
   const simg=MOB_IMGS[mob.key];
   if(simg){
-    const h=232*(simg.height/256), w=h*(simg.width/simg.height);
+    const h=232*(simg.height/192), w=h*(simg.width/simg.height);
     mg.drawImage(simg,-w/2,-h+4,w,h);
   }else if(mob.M.draw) mob.M.draw(mg,t,mob);
   else{ mg.restore(); return; }
