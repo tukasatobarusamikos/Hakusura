@@ -404,7 +404,7 @@ body{
           <button id="sndSe" type="button">効果音 ON</button>
         </div>
       </div>
-      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v3.8</span>
+      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v3.9</span>
     </div>
   </header>
   <div id="mobileBar">
@@ -412,7 +412,7 @@ body{
     <div class="mbItem"><span>💰</span><b id="mbGold">0</b></div>
     <div class="mbItem"><span>✦</span><b id="mbMast" style="color:#9fe1ff">0</b></div>
     <div id="sndMenuWrapM"><button id="mbSnd" type="button">🔊</button><div id="sndMenuM"><button id="mbBgm" type="button">BGM ON</button><button id="mbSe2" type="button">効果音 ON</button></div></div>
-    <div class="mbItem" style="opacity:.75"><span>v3.8</span></div>
+    <div class="mbItem" style="opacity:.75"><span>v3.9</span></div>
   </div>
 
   <div id="main">
@@ -558,6 +558,9 @@ function load(){
     if(S.equip){ for(const k in S.equip){ const it=S.equip[k]; if(it&&(typeof it.atk!=='number'||!isFinite(it.atk))) it.atk=0; if(it&&(typeof it.def!=='number'||!isFinite(it.def))) it.def=0; if(it&&(typeof it.hp!=='number'||!isFinite(it.hp))) it.hp=0; if(it&&typeof it.name!=='string') it.name='異なる時代の装備'; } }
     if(S.up){ for(const k in S.up){ S.up[k]=_num(S.up[k],0); } }
     if(S.sk){ for(const k in S.sk){ S.sk[k]=_num(S.sk[k],0); } }
+    S.shopRerollN=(typeof d.shopRerollN==='number'&&isFinite(d.shopRerollN)&&d.shopRerollN>0)?Math.floor(d.shopRerollN):0;
+    S.shopRotateT=(typeof d.shopRotateT==='number'&&isFinite(d.shopRotateT))?d.shopRotateT:0;
+    S.shopStockArr=Array.isArray(d.shopStockArr)?d.shopStockArr.slice():null;
     S.bgmAsk=!!d.bgmAsk; S.potions=d.potions||0; S.sp=d.sp||0; S.charId=d.charId||0; S.potionAutoUnlocked=!!d.potionAutoUnlocked; S.potionAuto=!!d.potionAuto; S.upResetN=d.upResetN||0; S.mastery=d.mastery||0; S.totalMastery=d.totalMastery||0; S.bossMasteryDone=d.bossMasteryDone||{}; S.shopUnlocked=!!d.shopUnlocked; S.rebirthUnlocked=!!d.rebirthUnlocked;
     S.region=d.region||1; S.deepestRegion=d.deepestRegion||S.region;
     // 旧セーブ移行: ステージ5のボス倒済みなら深淵の扉(6)を自動解放
@@ -735,8 +738,11 @@ function restoreShop(){
   // リロード後: セーブされた在庫と回転時刻を復元(リセット料金の連鎖も維持)
   if(S.shopStockArr&&S.shopStockArr.length===4&&S.shopRotateT>Date.now()){
     shopStock=S.shopStockArr.filter(Boolean); shopT=S.shopRotateT;
+    if(typeof S.shopRerollN!=='number'||!isFinite(S.shopRerollN)||S.shopRerollN<0) S.shopRerollN=0;
     return true;
   }
+  // タイマー切れでも在庫データがあれば連鎖カウントだけは維持(自動回転でリセットされるのを防ぐ)
+  if(S.shopStockArr&&S.shopStockArr.length===4){ return false; }
   return false;
 }
 function rerollCost(){ return Math.ceil(200*Math.pow(2,S.shopRerollN||0)); }
@@ -2468,7 +2474,8 @@ function renderTab(){
       tabContent.innerHTML='<div class="noteBox" style="text-align:center;padding:24px 12px">🔒 商店はまだ開かない。<br>スキルのパッシブ欄から「<b>商魂開拓</b>」を解放すると開店する。</div>';
       return;
     }
-    if(!restoreShop()&&(!shopStock.length||Date.now()>shopT)) shopRefresh();
+    const restored=restoreShop();
+    if(!restored&&(!shopStock.length||Date.now()>shopT)) shopRefresh();
     const rc=rerollCost();
     let h='<div class="secTitle">武器屋の行商</div>'
       +'<button id="rerollBtn" class="buyBtn skBuy" style="width:100%;padding:12px;margin-bottom:8px">🔄 品揃えをリセット（<span id="rerollCost">'+fmt(rc)+' G</span>）</button>'
