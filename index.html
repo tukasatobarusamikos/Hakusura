@@ -395,8 +395,7 @@ body{
   <header id="top">
     <div class="brand"><h1>放置ハクスラ</h1><span class="sub">IDLE HACK &amp; SLASH</span></div>
     <div class="wallet">
-      <div class="purse lvPurse"><span class="lbl">Lv</span><b id="lvVal">1</b>
-        <span class="xpWrap"><span class="xpFill" id="xpFill"></span><span class="xpTxt" id="xpTxt"></span></span></div>
+      <div class="purse lvPurse"><span class="lbl">Lv</span><b id="lvVal">1</b></div>
       <div class="purse"><span class="lbl">所持金</span><b id="goldVal">0</b></div>
       <div id="sndMenuWrap">
         <button id="sndBtn" type="button">🔊 音 ON</button>
@@ -405,15 +404,15 @@ body{
           <button id="sndSe" type="button">効果音 ON</button>
         </div>
       </div>
-      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v3.0</span>
+      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v3.5</span>
     </div>
   </header>
   <div id="mobileBar">
-    <div class="mbItem lv"><span>Lv</span><b id="mbLv">1</b><span class="xpWrap"><span class="xpFill" id="mbXpFill"></span><span class="xpTxt" id="mbXpTxt"></span></span></div>
+    <div class="mbItem lv"><span>Lv</span><b id="mbLv">1</b></div>
     <div class="mbItem"><span>💰</span><b id="mbGold">0</b></div>
     <div class="mbItem"><span>✦</span><b id="mbMast" style="color:#9fe1ff">0</b></div>
     <div id="sndMenuWrapM"><button id="mbSnd" type="button">🔊</button><div id="sndMenuM"><button id="mbBgm" type="button">BGM ON</button><button id="mbSe2" type="button">効果音 ON</button></div></div>
-    <div class="mbItem" style="opacity:.75"><span>v3.0</span></div>
+    <div class="mbItem" style="opacity:.75"><span>v3.5</span></div>
   </div>
 
   <div id="main">
@@ -1410,6 +1409,7 @@ const MAIN_TIERS=[
 const MAIN_MAX=10;
 function mainTier(){ return MAIN_TIERS[(S.sk.goushin||1)-1]||MAIN_TIERS[0]; }
 function mainCost(lv){ return lv===0?3:Math.ceil(4*Math.pow(1.45,lv-1)); }  // 3,4,6,9,13,19,27,40,58,84
+function skillCdMax(){ const lv=S.sk.goushin||0; return 15*Math.pow(0.94,lv); } // 必殺技Lvでゲージ回復加速(15秒→最大7.5秒)
 function mainDesc(lv){
   if(lv>=MAIN_MAX) return '<b style="color:var(--gold)">'+MAIN_TIERS[MAIN_MAX-1].n+'</b>： '+MAIN_TIERS[MAIN_MAX-1].d+'（最大段階）';
   return '<b style="color:var(--gold)">'+MAIN_TIERS[lv-1].n+'</b>： '+MAIN_TIERS[lv-1].d+'<br>▼ 次段「'+MAIN_TIERS[lv].n+'」： '+MAIN_TIERS[lv].d;
@@ -2613,7 +2613,7 @@ const els={
   floor:null,region:null,dots:$('#killDots'),up:null,down:null,regUp:null,regDown:null,
   skill:$('#skillBtn'),skillCdEl:$('#skillCd'),bossFill:$('#bossFill'),xp:null,
   skTab:document.querySelector('#tabs button[data-tab="sk"]'),tabList:$('#tabs'),skToast:$('#skToast'),skillLbl:document.querySelector('#skillBtn span'),
-  lv:$('#lvVal'),xpF:$('#xpFill'),xpT:$('#xpTxt'),lvUpFx:$('#lvUpFx'),luLv:$('#luLv'),
+  lv:$('#lvVal'),xpF:$('#xpFill'),xpT:$('#xpTxt'),lvUpFx:null,luLv:$('#luLv'),
   fire:$('#fireBtn'),fireCd:$('#fireCd'),pot:$('#potionBtn'),
 };
 function buildDots(){
@@ -2636,15 +2636,15 @@ function hud(){
   const gv=fmt(S.gold);
   if(els.gold.textContent!==gv) els.gold.textContent=gv;
   els.gold.title=S.gold.toLocaleString('ja-JP')+' G';
-  const mbG=$('#mbGold'), mbS=null, mbL=$('#mbLv'), mbXF=$('#mbXpFill'), mbXT=$('#mbXpTxt'), mbM=$('#mbMast');
+  const mbG=$('#mbGold'), mbS=null, mbL=$('#mbLv'), mbXF=null, mbXT=null, mbM=$('#mbMast');
   if(mbM) mbM.textContent=fmt(S.mastery||0);
   if(mbG) mbG.textContent=gv;
   if(mbL) mbL.textContent=S.level;
   if(mbXF) mbXF.style.width='0%';
   if(mbXT) mbXT.textContent='✦'+fmt(S.mastery||0);
   els.lv.textContent=S.level;
-  els.xpF.style.width='0%';
-  els.xpT.textContent='';
+  if(els.xpF) els.xpF.style.width='0%';
+  if(els.xpT) els.xpT.textContent='';
   els.atk.textContent=fmt(atkVal());
   els.crit.textContent=Math.round(critC()*100)+'%';
   els.hp.textContent=fmt(hero?Math.ceil(hero.hp):maxHp())+' / '+fmt(maxHp());
@@ -2684,7 +2684,7 @@ const rn=REG(S.region).name;
 
   // skill
   const cd=S.skillCd||0;
-  els.skillCdEl.style.transform='scaleX('+(cd/15)+')';
+  els.skillCdEl.style.transform='scaleX('+(cd/skillCdMax())+')';
   const mn={n:(S.sk.goushin||0)?mainTier().n:'必殺技'};
   // skill unlockable notification (rising edge only)
   const can=canUnlockAny();
@@ -2753,7 +2753,7 @@ els.pot.addEventListener('click',()=>drinkPotion(false));
 function castSkill(){
   if((S.skillCd||0)>0||!mob||mob.dying>0) return;
   if(!(S.sk.goushin||0)) return;
-  S.skillCd=15;
+  S.skillCd=skillCdMax();
   sfx.skill(); shake=Math.max(shake,12);
   ringFx(0.72,0.6,'#ffd166');
   const t=(S.sk.goushin||1);
