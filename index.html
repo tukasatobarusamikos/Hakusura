@@ -404,7 +404,7 @@ body{
           <button id="sndSe" type="button">効果音 ON</button>
         </div>
       </div>
-      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v3.5</span>
+      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v3.6</span>
     </div>
   </header>
   <div id="mobileBar">
@@ -412,7 +412,7 @@ body{
     <div class="mbItem"><span>💰</span><b id="mbGold">0</b></div>
     <div class="mbItem"><span>✦</span><b id="mbMast" style="color:#9fe1ff">0</b></div>
     <div id="sndMenuWrapM"><button id="mbSnd" type="button">🔊</button><div id="sndMenuM"><button id="mbBgm" type="button">BGM ON</button><button id="mbSe2" type="button">効果音 ON</button></div></div>
-    <div class="mbItem" style="opacity:.75"><span>v3.5</span></div>
+    <div class="mbItem" style="opacity:.75"><span>v3.6</span></div>
   </div>
 
   <div id="main">
@@ -1329,8 +1329,8 @@ let killBuf=[];
 function recordKill(){ killBuf.push(performance.now()); }
 function calcKps(){
   const now=performance.now();
-  while(killBuf.length&&now-killBuf[0]>10000) killBuf.shift();
-  return killBuf.length/10;
+  while(killBuf.length&&now-killBuf[0]>60000) killBuf.shift();
+  return killBuf.length/60;
 }
 function calcGps(){
   const now=performance.now();
@@ -2926,10 +2926,10 @@ if(!prev){
 setSndLabels();
 if(S.autoSkill){ autoSkillBtn.textContent='必殺技自動 ON'; autoSkillBtn.classList.add('on'); autoSkillBtn.setAttribute('aria-pressed','true'); }
 // offline progress
-if(prev&&S.gps>0){
+if(prev){
   const elapsed=Math.min(OFFLINE_CAP,(Date.now()-(prev.lastSeen||Date.now()))/1000);
   if(elapsed>90){
-    const kps=(typeof S.kps==='number'&&isFinite(S.kps)&&S.kps>0)?S.kps:(S.gps>0?(S.gps/Math.max(1,goldPerKill())):0.2);
+    const kps=(typeof S.kps==='number'&&isFinite(S.kps)&&S.kps>0)?S.kps:(S.gps>0?(S.gps/Math.max(1,goldPerKill())):0.2); // kps>なければgps逆算、それも無ければ既定0.2体/秒
     const kills=Math.max(1,Math.floor(kps*elapsed*OFFLINE_EFF));
     const mGain=Math.max(1,Math.floor(kills*(1+0.25*(S.up.mastery||0))*OFFLINE_EFF));
     if(mGain>0){
