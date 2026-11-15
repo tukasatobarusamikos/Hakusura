@@ -404,7 +404,7 @@ body{
           <button id="sndSe" type="button">効果音 ON</button>
         </div>
       </div>
-      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v4.3</span>
+      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v4.4</span>
     </div>
   </header>
   <div id="mobileBar">
@@ -412,7 +412,7 @@ body{
     <div class="mbItem"><span>💰</span><b id="mbGold">0</b></div>
     <div class="mbItem"><span>✦</span><b id="mbMast" style="color:#9fe1ff">0</b></div>
     <div id="sndMenuWrapM"><button id="mbSnd" type="button">🔊</button><div id="sndMenuM"><button id="mbBgm" type="button">BGM ON</button><button id="mbSe2" type="button">効果音 ON</button></div></div>
-    <div class="mbItem" style="opacity:.75"><span>v4.3</span></div>
+    <div class="mbItem" style="opacity:.75"><span>v4.4</span></div>
   </div>
 
   <div id="main">
@@ -597,8 +597,10 @@ function xpNeed(){ return Math.floor(30*Math.pow(1.2,S.level-1)); }
 function goldPerKill(){ return Math.max(1,Math.ceil(1*Math.pow(1.18,S.floor-1)*goldM()/8)); }
 function maxHp(){ return Math.floor((60+eqSum('hp'))*(1+0.06*(S.up.vit||0))*(1+0.08*(S.sk.hp||0))); }
 function heroDef(){ return Math.floor((eqSum('def')+Math.floor(S.level/2))*(1+0.08*(S.up.def||0))); }
-function mobAtk(f,g){ if(f>50) f=50+(f-50)*0.01; let d=Math.max(1,5*Math.pow(1.235,f-1)*g*(1+0.04*S.kills));
-  const si=stageIdx(f); if(si===4) d*=2; else if(si===5) d*=4; // ステージ5=2倍 / ステージ6=4倍(ユーザー指定)
+function mobAtk(f,g,isBoss){ if(f>50) f=50+(f-50)*0.01; let d=Math.max(1,5*Math.pow(1.235,f-1)*g*(1+0.04*S.kills));
+  const si=stageIdx(f);
+  if(si===4) d*=2;                                   // ステージ5=2倍
+  else if(si===5) d*=(isBoss?1000:10000);            // ステージ6=ボス1000倍/雑魚1万倍(ユーザー指定)
   return d; }
 // ステージ別 HP倍率（雑魚 / ボス）
 const MOB_HPM=[3,10,20,30,50,19800], BOSS_HPM=[100,200,300,400,600,374200]; // ステージ6のみユーザー指定で更に100倍
@@ -1030,7 +1032,7 @@ function spawnMob(){
   const killsF=isFinite(S.kills)?S.kills:0;
   hp=Math.floor(12*Math.pow(1.26,f-1)*(1+0.08*killsF)*M.hp*hpm);
   if(!isFinite(hp)||hp<=0) hp=100;
-  mob={key,M,el:MOB_EL[key],boss:!!M.boss,max:hp,hp,hurt:0,born:0,atkT:(stageIdx(f)===5?M.aI/200:(stageIdx(f)===4?M.aI*0.5:M.aI))*rand(0.9,1.3),lunge:0,dying:0};
+  mob={key,M,el:MOB_EL[key],boss:!!M.boss,max:hp,hp,hurt:0,born:0,atkT:(stageIdx(f)===5?(M.boss?2.0:1.5):(stageIdx(f)===4?M.aI*0.5:M.aI))*rand(0.9,1.3),lunge:0,dying:0};
   if(mob.boss){
     bossT=(S.region>=6?BOSS_TIME*10:BOSS_TIME); $('#bossTimer').style.display='block';
     const bl=document.querySelector('#bossTimer .btLabel'); if(bl) bl.textContent='BOSS';
@@ -1202,10 +1204,11 @@ function tickCombat(dt){
     mob.atkT-=dt;
     if(mob.atkT<=0){
       const si=stageIdx(S.floor);
-      const aIspan=si===5?mob.M.aI/200:(si===4?mob.M.aI*0.5:mob.M.aI); // ステージ6=攻撃スパン1/100(100倍速), ステージ5=2倍速
-      mob.atkT=aIspan*rand(0.85,1.2);
+      // ステージ6: 雑魚=1.5秒間隔 / ボス=約2秒間隔(ユーザー指定)
+      const aIspan=si===5?(mob.boss?2.0:1.5):(si===4?mob.M.aI*0.5:mob.M.aI);
+      mob.atkT=aIspan*rand(0.9,1.1);
       mob.lunge=1;
-      let d=mobAtk(S.floor,mob.M.d)*(mob.boss?2.2:1);
+      let d=mobAtk(S.floor,mob.M.d,mob.boss)*(mob.boss?1:1);
       // elemental defense: count matching/vulnerable pieces across equip slots
       let eCnt=0;
       for(const [k] of SLOTS){ const eq=S.equip[k]; if(eq&&eq.el){ if(EL_ADV[mob.el]===eq.el) eCnt++; else if(EL_ADV[eq.el]===mob.el) eCnt--; } }
