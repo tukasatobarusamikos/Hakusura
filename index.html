@@ -404,7 +404,7 @@ body{
           <button id="sndSe" type="button">効果音 ON</button>
         </div>
       </div>
-      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v3.9</span>
+      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v4.0</span>
     </div>
   </header>
   <div id="mobileBar">
@@ -412,7 +412,7 @@ body{
     <div class="mbItem"><span>💰</span><b id="mbGold">0</b></div>
     <div class="mbItem"><span>✦</span><b id="mbMast" style="color:#9fe1ff">0</b></div>
     <div id="sndMenuWrapM"><button id="mbSnd" type="button">🔊</button><div id="sndMenuM"><button id="mbBgm" type="button">BGM ON</button><button id="mbSe2" type="button">効果音 ON</button></div></div>
-    <div class="mbItem" style="opacity:.75"><span>v3.9</span></div>
+    <div class="mbItem" style="opacity:.75"><span>v4.0</span></div>
   </div>
 
   <div id="main">
@@ -2486,10 +2486,16 @@ function renderTab(){
     if(rb) rb.addEventListener('click',()=>{
       if(S.gold<rc){ log('ゴールドが足りない（'+fmt(rc)+'G 必要）','warn'); return; }
       S.gold-=rc; S.shopRerollN=(S.shopRerollN||0)+1;
+      shopT=Date.now()+10*60*1000;
+      S.shopRotateT=shopT;
       shopStock=Array.from({length:4},()=>makeItem(S.floor+ri(0,2)));
       shopStock.forEach(it=>it.price=Math.ceil(it.value*3.5*4));
-      renderShop(); renderTab(); hud(); save();
-      log('行商の品揃えを入れ替えた（-'+fmt(rc)+'G / 次は '+fmt(rerollCost())+'G）','gold'); sfx.coin();
+      S.shopStockArr=shopStock.slice();
+      const newRc=rerollCost();
+      renderTab();
+      requestAnimationFrame(()=>{ const ns=document.getElementById('shopRows'); if(ns){ renderShop(); } });
+      hud(); save();
+      log('行商の品揃えを入れ替えた（-'+fmt(rc)+'G / 次は '+fmt(newRc)+'G）','gold'); sfx.coin();
     });
     renderShop();
     shopRowsTimer=true;
