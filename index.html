@@ -566,7 +566,7 @@ function load(){
   }catch(e){ return null; }
 }
 let wiped=false;
-function save(){ if(wiped) return; S.lastSeen=Date.now(); try{ localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){} }
+function save(){ if(wiped) return; S.lastSeen=Date.now(); try{ S.kps=+calcKps().toFixed(2); }catch(e){} try{ localStorage.setItem(SAVE_KEY,JSON.stringify(S)); }catch(e){} }
 
 /* ================= derived ================= */
 function eqSum(k){ let t=0; for(const s in S.equip){ const it=S.equip[s]; if(it) t+=(it[k]||0); } return t; }
@@ -1037,7 +1037,7 @@ function killMob(){
   }
   const g=Math.max(1,Math.ceil(1*Math.pow(1.18,S.floor-1)*goldM()/8*m.M.g));
   S.gold+=g; S.totalGold+=g; gainGps(g);
-  S.totalKills++;
+  S.totalKills++; recordKill();
   { const mRate=(1+0.25*(S.up.mastery||0));
     // 敵の強さ補正: ステージHP倍率の平方根（1:×1.0 / 2:×1.73 / 3:×2.45 / 4:×3.0 / 5:×3.16）…ステージ1基準で1.0
     const strMul=Math.sqrt(MOB_HPM[stageIdx(S.floor)])/Math.sqrt(MOB_HPM[0]);
@@ -1312,6 +1312,13 @@ const sfx={
 /* ================= gps ema ================= */
 const gainBuf=[];
 function gainGps(g){ gainBuf.push({t:performance.now(),g}); }
+let killBuf=[];
+function recordKill(){ killBuf.push(performance.now()); }
+function calcKps(){
+  const now=performance.now();
+  while(killBuf.length&&now-killBuf[0]>10000) killBuf.shift();
+  return killBuf.length/10;
+}
 function calcGps(){
   const now=performance.now();
   while(gainBuf.length&&now-gainBuf[0].t>10000) gainBuf.shift();
@@ -2875,7 +2882,8 @@ if(S.autoSkill){ autoSkillBtn.textContent='必殺技自動 ON'; autoSkillBtn.cla
 if(prev&&S.gps>0){
   const elapsed=Math.min(OFFLINE_CAP,(Date.now()-(prev.lastSeen||Date.now()))/1000);
   if(elapsed>90){
-    const kills=Math.max(1,Math.floor((S.gps/Math.max(1,goldPerKill()))*elapsed*OFFLINE_EFF));
+    const kps=(typeof S.kps==='number'&&isFinite(S.kps)&&S.kps>0)?S.kps:(S.gps>0?(S.gps/Math.max(1,goldPerKill())):0.2);
+    const kills=Math.max(1,Math.floor(kps*elapsed*OFFLINE_EFF));
     const mGain=Math.max(1,Math.floor(kills*(1+0.25*(S.up.mastery||0))*OFFLINE_EFF));
     if(mGain>0){
       S.mastery+=mGain; S.totalMastery+=mGain;
@@ -2935,5 +2943,6 @@ window.addEventListener('error',e=>{ const d=document.createElement('div'); d.st
 requestAnimationFrame(loop);
 
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
