@@ -16,7 +16,7 @@
   --line:#2a3145; --line2:#3a4360;
   --ink:#e8e4d8; --ink-dim:#9aa0b4; --ink-faint:#5c6378;
   --ember:#ff9d3d; --gold:#ffd166; --blood:#e5484d;
-  --r0:#9aa3b5; --r1:#4ea3ff; --r2:#b977ff; --r3:#ff9d3d;
+  --r0:#9aa3b5; --r1:#4ea3ff; --r2:#b977ff; --r3:#ff9d3d; --r4:#5ef2c8;
   --font-body:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
   --font-pixel:"DotGothic16","Zen Kaku Gothic New",sans-serif;
 }
@@ -243,7 +243,7 @@ body{
 .shopDiff.down{color:#e08a8a;background:rgba(224,90,90,.1);border:1px solid rgba(224,90,90,.35)}
 .shopCur{font-size:10px;color:var(--ink-faint);margin-top:4px}
 .slotCard.r0{border-left-color:var(--r0)} .slotCard.r1{border-left-color:var(--r1)} .slotCard.r2{border-left-color:var(--r2)} .slotCard.r3{border-left-color:var(--r3)}
-.c0{color:var(--r0)} .c1{color:var(--r1)} .c2{color:var(--r2)} .c3{color:var(--r3)}
+.c0{color:var(--r0)} .c1{color:var(--r1)} .c2{color:var(--r2)} .c3{color:var(--r3)} .c4{color:var(--r4);text-shadow:0 0 10px rgba(94,242,200,.5)}
 .noteBox{font-size:11px;color:var(--ink-faint);border:1px dashed var(--line2);padding:8px 10px;border-radius:3px;margin-bottom:10px}
 
 /* rebirth / record */
@@ -404,7 +404,7 @@ body{
           <button id="sndSe" type="button">効果音 ON</button>
         </div>
       </div>
-      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v4.4</span>
+      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v4.7</span>
     </div>
   </header>
   <div id="mobileBar">
@@ -412,7 +412,7 @@ body{
     <div class="mbItem"><span>💰</span><b id="mbGold">0</b></div>
     <div class="mbItem"><span>✦</span><b id="mbMast" style="color:#9fe1ff">0</b></div>
     <div id="sndMenuWrapM"><button id="mbSnd" type="button">🔊</button><div id="sndMenuM"><button id="mbBgm" type="button">BGM ON</button><button id="mbSe2" type="button">効果音 ON</button></div></div>
-    <div class="mbItem" style="opacity:.75"><span>v4.4</span></div>
+    <div class="mbItem" style="opacity:.75"><span>v4.7</span></div>
   </div>
 
   <div id="main">
@@ -615,12 +615,14 @@ const RARITY=[
   {n:'レア',cls:'c1',m:1.8,w:28},
   {n:'エピック',cls:'c2',m:3.2,w:6},
   {n:'レジェンド',cls:'c3',m:6.5,w:1},
+  {n:'深淵',cls:'c4',m:13.0,w:0},   // ドロップ抽選外: ステージ6ボス撃破時の確定ボーナス等
 ];
 const PFX=[
   ['古びた','旅人の','鍛冶屋の','錆びた','見習いの'],
   ['鋼の','銀の','紋章入りの','狼の','狩人の','破風の'],
   ['竜鱗の','ルーンの','深淵の','月影の','焔蜥の','嵐呼びの','黒檀の'],
   ['星砕きの','竜殺しの','王者の','終焉の','冥界渡りの','暁天の'],
+  ['裏法の','虚数の','忘却晒しの','万象析る','門開きの'],
 ];
 // レア度ごとの「銘」— 高レアほど独創的な二つ名が付く
 const EPITHET=[
@@ -628,6 +630,7 @@ const EPITHET=[
   ['・牙','・爪','・咆哮','・疾風'],
   ['・狼煙','・燼','・氷華','・雷鳴','・影縫','・紅殻'],
   ['・天焦がし','・地割れ','・宵闇','・潮鳴り','・灰塵','・伏竜','・刻裂'],
+  ['・不可視','・無名','・虚数解','・門隠れ','・終端'],
 ];
 // フレーバー文（ドロップ時に1行の物語として見える）
 const FLAVOR=[
@@ -635,6 +638,7 @@ const FLAVOR=[
   ['鍛えられし手が、確かな熱を残した。','かつて狼群を切り裂いた。','紋章は古い盟約を語る。'],
   ['竜すら腰を引く気配を纏っている。','月の満ち欠けで切れ味が変わるという。','深淵を覗いた者がだけが持てる。'],
   ['一振りで星を落としたという伝説。','これで竜は二度と空を飛ばない。','終わりを告げるために造られた。'],
+  ['裏法が記された頁を、そのまま刃にした。','名を呼ぶと呼び返される。扱いは計画的に。','扉の向こうから何かが、そっと手を貸した。'],
 ];
 const NAMES={
   weapon:['ソード','ツルギ','大剣','双刃','戦斧','魔剣','レイピア','サーベル','シミター','片手斧','槍','ハンマー','メイス','薙刀','太刀','打刀','曲刀','弯刀','棘剣','鉄鞭','刃杖','克剣','村正','グレイソード','クレイモア','ブロードソード','短剣','戦鎌','牙剣','魔槍'],
@@ -658,7 +662,7 @@ function makeItem(fl,minR){
   const slot=choice(SLOTS)[0], R=RARITY[rI];
   const it={slot,r:rI,name:choice(PFX[rI])+choice(NAMES[slot])+choice(EPITHET[rI]),lv:fl,atk:0,crit:0,critd:0,gold:0,hp:0,def:0,plus:0};
   if(rI>=2) it.flavor=choice(FLAVOR[rI]);
-  if(rI===3) it.serial='No.'+(1000+Math.floor(Math.random()*9000));
+  if(rI===3||rI===4) it.serial='No.'+(1000+Math.floor(Math.random()*9000));
   if(slot==='weapon'||slot==='armor'||slot==='ring'||slot==='amulet') it.el=choice(EL_KEYS.filter(k=>k!=='ice'));
   const scale=6*Math.pow(1.30,fl-1)*R.m;
   it.atk=Math.max(1,Math.floor(scale*rand(0.9,1.4)*(slot==='weapon'?1:0.25)));
@@ -719,10 +723,10 @@ function dropItem(forced){
     const cur=S.equip[it.slot];
     if(!cur||it.score>cur.score){
       S.equip[it.slot]=it;
-      log('【'+R.n+'】'+it.name+' を装備！ '+itemStats(it).replace(/<[^>]+>/g,''), it.r===3?'legend':(it.r>=1?'drop':'sys'));
+      log('【'+R.n+'】'+it.name+' を装備！ '+itemStats(it).replace(/<[^>]+>/g,''), it.r>=3?'legend':(it.r>=1?'drop':'sys'));
     }else{
       sellValue(it);
-      log(R.n+'「'+it.name+'」を自動売却 +'+fmt(it.value)+'G', it.r===3?'legend':'gold');
+      log(R.n+'「'+it.name+'」を自動売却 +'+fmt(it.value)+'G', it.r>=3?'legend':'gold');
     }
   }else{
     if(S.bag.length>=BAG_MAX){
@@ -730,7 +734,7 @@ function dropItem(forced){
       if(it.r>=1) log('荷物が一杯だ… '+R.n+'「'+it.name+'」を売却 +'+fmt(it.value)+'G','gold');
     }else{
       S.bag.push(it);
-      log('【'+R.n+'】'+it.name+' を入手 '+itemStats(it).replace(/<[^>]+>/g,''), it.r===3?'legend':(it.r>=1?'drop':'sys'));
+      log('【'+R.n+'】'+it.name+' を入手 '+itemStats(it).replace(/<[^>]+>/g,''), it.r>=3?'legend':(it.r>=1?'drop':'sys'));
     }
   }
   dirty.equip=true;
@@ -750,11 +754,12 @@ function restoreShop(){
   return false;
 }
 function rerollCost(){ return Math.ceil(200*Math.pow(2,S.shopRerollN||0)); }
-function shopRefresh(){
+function shopRefresh(keepChain){
   shopStock=Array.from({length:4},()=>makeItem(S.floor+ri(0,2)));
   shopStock.forEach(it=>it.price=Math.ceil(it.value*3.5*4));
   shopT=Date.now()+10*60*1000;
-  S.shopRerollN=0; S.shopRotateT=shopT;
+  if(!keepChain) S.shopRerollN=0;          // 手動リセット時のみ連鎖を続ける
+  S.shopRotateT=shopT;
   S.shopStockArr=shopStock.slice();
   save();
 }
@@ -1072,16 +1077,24 @@ function killMob(){
   S.gold+=g; S.totalGold+=g; gainGps(g);
   S.totalKills++; recordKill();
   { const mRate=(1+0.25*(S.up.mastery||0));
-    // 敵の強さ補正: ステージHP倍率の平方根（1:×1.0 / 2:×1.73 / 3:×2.45 / 4:×3.0 / 5:×3.16）…ステージ1基準で1.0
     const strMul=Math.sqrt(MOB_HPM[stageIdx(S.floor)])/Math.sqrt(MOB_HPM[0]);
-    const raw=(m.boss?((S.bossMasteryDone&&S.bossMasteryDone[S.region])?0:3):(m.M.lucky?2:1))*strMul*mRate;
+    const raw=(m.boss?((S.bossMasteryDone&&S.bossMasteryDone[S.region])?0:3):1)*strMul*mRate;
     S.masteryAcc=(S.masteryAcc||0)+raw;
     const mp=Math.floor(S.masteryAcc);
     if(mp>=1){ S.masteryAcc-=mp; }
-    if(mp>0&&!m.__replay){ S.mastery+=mp; S.totalMastery+=mp; if(m.boss){ S.bossMasteryDone[S.region]=true; fx.push({k:'t',str:'熟練度 +'+mp,col:'#9fe1ff',x:0.72,y:0.30,v:0.05,life:1}); } else fx.push({k:'t',str:'熟練度 +'+mp,col:'#9fe1ff',x:0.72,y:0.30,v:0.05,life:1}); } }
+    if(mp>0&&!m.__replay){ S.mastery+=mp; S.totalMastery+=mp; fx.push({k:'t',str:'熟練度 +'+mp,col:'#9fe1ff',x:0.72,y:0.30,v:0.05,life:1}); } }
   coinFx(m.boss?26:ri(5,9));
   sfx.coin(); sfx.die();
   if(m.boss||dropC()>Math.random()) dropItem();
+  if(S.region>=6&&!m.__replay&&!m.M.lucky){ // 深淵の扉: ボス=確定 / 雑魚=1% で深淵装備
+    if(m.boss){
+      const ab=makeItem(S.floor,4); ab.r=4; ab.score=computeScore(ab); dropItem(ab);
+      log('深淵の報酬： '+RARITY[4].n+'「'+ab.name+'」が落ちてきた！','legend');
+    }else if(Math.random()<0.01){
+      const ab=makeItem(S.floor,4); ab.r=4; ab.score=computeScore(ab); dropItem(ab);
+      log('奇跡的！ '+RARITY[4].n+'「'+ab.name+'」を入手！','legend');
+    }
+  }
   if(Math.random()<0.06){
     S.potions=Math.min(99,S.potions+1);
     log('回復薬を入手した（所持 '+S.potions+'）','drop');
@@ -1092,39 +1105,18 @@ function killMob(){
     else { log('再戦のため、特典（転生の魂・熟練度ボーナス）はない。','sys'); }
     S.kills=0; S.bossCleared[S.region]=true; bossChallengeActive=false; bossT=0; bossBgmStop(); fieldBgmStart(); S.runFloor=Math.max(S.runFloor,S.floor); S.bestFloor=Math.max(S.bestFloor,S.floor);
     $('#bossTimer').style.display='none';
-    if(S.region===S.deepestRegion&&S.deepestRegion<6){
-      S.deepestRegion++;
-      const nxt=S.deepestRegion;
-      log('ステージ'+S.region+'「'+REG(S.region).name+'」を制圧！ 「'+REG(nxt).name+'」が解放された！','legend');
-      modal('ステージ制圧！',
-        'ステージ'+S.region+'「'+REG(S.region).name+'」のボスを倒した！\n\n新しいステージが解放されました：\n<b style="color:var(--gold);font-size:16px">ステージ'+nxt+'「'+REG(nxt).name+'」</b>\n\n次のステージへ進みますか？',
-        'ステージ'+nxt+'へ進む',()=>{ gotoRegion(nxt); showSkToast('ステージ'+nxt+'「'+REG(nxt).name+'」へ移動！'); },
-        'このステージに残る');
-    }else if(m.__replay||S.bossCleared[S.region]){
-      const rg=REG(S.region);
-      modal('勝利！',
-        'ステージ'+S.region+'「'+rg.name+'」のボス『'+M.name+'』を倒した！\n\n（再戦のため新しいステージ解放はありません）',
-        'このステージに残る');
-      log('ステージ'+S.region+'のボスを再撃破！','gold');
-    }else{
-      log('ステージ'+S.region+'「'+REG(S.region).name+'」のボスを再撃破！','gold');
-    }
-    if(hero&&!hero.dead){ hero.hp=hero.max; log('勝利の雄叫びと共に、傷が癒えた。','sys'); }
-    sfx.level(); ringFx(0.72,0.62,'#ffd166');
+    if(S.region===S.deepestRegion&&S.deepestRegion<6){ S.deepestRegion++; log('更深淵の扉が開いた！','legend'); }
   }else{
     S.kills++;
     if(S.kills>=KILL_NEED){
-      if(regFloor(S.floor)<10){
-        S.kills=0; S.floor++; S.runFloor=Math.max(S.runFloor,S.floor); S.bestFloor=Math.max(S.bestFloor,S.floor); S.floorChanged=true; S.deepFloor[S.region]=Math.max(S.deepFloor[S.region]||1,regFloor(S.floor));
-      }else{
-        S.kills=0;
-      }
+      if(regFloor(S.floor)<10){ S.floor++; S.kills=0; log('F'+S.floor+' へ進んだ','sys'); }
+      else if(!bossChallengeActive){ bossChallengeActive=true; startBossEncounter(); }
     }
   }
+  fx.push({k:'t',str:'+'+g+'G',col:'#ffd166',x:0.72,y:0.38,v:0.06,life:1});
   for(let i=0;i<(m.boss?18:8);i++) fx.push({k:'p',x:0.72+rand(-0.05,0.05),y:0.55+rand(-0.08,0.08),vx:rand(-0.18,0.18),vy:rand(-0.28,-0.05),c:'#c8ccd8',life:1});
   mob.dying=0.5;
 }
-
 
 /* ================= combat ================= */
 let atkTimer=1, heroAnim=0, tapCd=0, shake=0, potCd=0, comboT=0, comboQ=0;
@@ -2482,7 +2474,7 @@ function renderTab(){
       return;
     }
     const restored=restoreShop();
-    if(!restored&&(!shopStock.length||Date.now()>shopT)) shopRefresh();
+    if(!restored&&(!shopStock.length||Date.now()>shopT)) shopRefresh(true);
     const rc=rerollCost();
     let h='<div class="secTitle">武器屋の行商</div>'
       +'<button id="rerollBtn" class="buyBtn skBuy" style="width:100%;padding:12px;margin-bottom:8px">🔄 品揃えをリセット（<span id="rerollCost">'+fmt(rc)+' G</span>）</button>'
@@ -3015,7 +3007,7 @@ function loop(now){
   saveT+=dt; if(saveT>5){ saveT=0; save(); }
   fieldBgmStart();
   if(S.autoBoss&&regFloor(S.floor)===10&&!mob&&!(S.bossCleared&&S.bossCleared[S.region])&&!bossChallengeActive&&!hero.dead) startBossChallenge();
-  if(shopRowsTimer){ uiShopT+=dt; if(uiShopT>1){ uiShopT=0; if(Date.now()>shopT){ shopRefresh(); if(curTab==='shop') renderShop(); } else if(curTab==='shop'){ const st2=document.getElementById('shopTimer'); if(st2) st2.textContent=Math.max(0,Math.ceil((shopT-Date.now())/60000)); } } }
+  if(shopRowsTimer){ uiShopT+=dt; if(uiShopT>1){ uiShopT=0; if(Date.now()>shopT){ shopRefresh(true); if(curTab==='shop') renderShop(); } else if(curTab==='shop'){ const st2=document.getElementById('shopTimer'); if(st2) st2.textContent=Math.max(0,Math.ceil((shopT-Date.now())/60000)); } } }
   try{ draw(now/1000); }catch(e){ if(errN<5){ errN++; console.error(e); } }
   requestAnimationFrame(loop);
 window.addEventListener('error',e=>{ const d=document.createElement('div'); d.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#a00;color:#fff;font:11px monospace;padding:6px;white-space:pre-wrap'; d.textContent='ERR: '+e.message; document.body.appendChild(d); });
@@ -3023,6 +3015,5 @@ window.addEventListener('error',e=>{ const d=document.createElement('div'); d.st
 requestAnimationFrame(loop);
 
 </script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
