@@ -404,7 +404,7 @@ body{
           <button id="sndSe" type="button">効果音 ON</button>
         </div>
       </div>
-      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v4.7</span>
+      <span id="verTag" style="font-size:11px;color:#ffd166;font-weight:700;align-self:center;margin-left:6px;font-family:var(--font-pixel)">v4.9</span>
     </div>
   </header>
   <div id="mobileBar">
@@ -412,7 +412,7 @@ body{
     <div class="mbItem"><span>💰</span><b id="mbGold">0</b></div>
     <div class="mbItem"><span>✦</span><b id="mbMast" style="color:#9fe1ff">0</b></div>
     <div id="sndMenuWrapM"><button id="mbSnd" type="button">🔊</button><div id="sndMenuM"><button id="mbBgm" type="button">BGM ON</button><button id="mbSe2" type="button">効果音 ON</button></div></div>
-    <div class="mbItem" style="opacity:.75"><span>v4.7</span></div>
+    <div class="mbItem" style="opacity:.75"><span>v4.9</span></div>
   </div>
 
   <div id="main">
@@ -526,7 +526,7 @@ let ITEM_UID=1;
 const DEF=()=>({
   v:1, gold:0, souls:0, rebirths:0,
   floor:1, runFloor:1, bestFloor:1, kills:0,
-  region:1, deepestRegion:1, bossCleared:{}, deepFloor:{1:1}, shopRerollN:0, shopRotateT:0, charId:0, upResetN:0, mastery:0, totalMastery:0, bossMasteryDone:{}, shopUnlocked:false, rebirthUnlocked:false,
+  region:1, deepestRegion:1, bossCleared:{}, deepFloor:{1:1}, shopRerollN:0, shopRotateT:0, charId:0, upResetN:0, mastery:0, totalMastery:0, bossMasteryDone:{}, dex:{}, shopUnlocked:false, rebirthUnlocked:false,
   level:1, xp:0,
   up:{atk:0,spd:0,crit:0,critd:0,goldup:0,luck:0,def:0,vit:0,mastery:0},
   equip:{weapon:null,armor:null,ring:null,amulet:null},
@@ -561,7 +561,7 @@ function load(){
     S.shopRerollN=(typeof d.shopRerollN==='number'&&isFinite(d.shopRerollN)&&d.shopRerollN>0)?Math.floor(d.shopRerollN):0;
     S.shopRotateT=(typeof d.shopRotateT==='number'&&isFinite(d.shopRotateT))?d.shopRotateT:0;
     S.shopStockArr=Array.isArray(d.shopStockArr)?d.shopStockArr.slice():null;
-    S.bgmAsk=!!d.bgmAsk; S.potions=d.potions||0; S.sp=d.sp||0; S.charId=d.charId||0; S.potionAutoUnlocked=!!d.potionAutoUnlocked; S.potionAuto=!!d.potionAuto; S.upResetN=d.upResetN||0; S.mastery=d.mastery||0; S.totalMastery=d.totalMastery||0; S.bossMasteryDone=d.bossMasteryDone||{}; S.shopUnlocked=!!d.shopUnlocked; S.rebirthUnlocked=!!d.rebirthUnlocked;
+    S.bgmAsk=!!d.bgmAsk; S.potions=d.potions||0; S.sp=d.sp||0; S.charId=d.charId||0; S.potionAutoUnlocked=!!d.potionAutoUnlocked; S.potionAuto=!!d.potionAuto; S.upResetN=d.upResetN||0; S.mastery=d.mastery||0; S.totalMastery=d.totalMastery||0; S.bossMasteryDone=d.bossMasteryDone||{}; S.dex=d.dex||{}; S.shopUnlocked=!!d.shopUnlocked; S.rebirthUnlocked=!!d.rebirthUnlocked;
     S.region=d.region||1; S.deepestRegion=d.deepestRegion||S.region;
     // 旧セーブ移行: ステージ5のボス倒済みなら深淵の扉(6)を自動解放
     if(d.bossCleared&&d.bossCleared['5']&&S.deepestRegion<6) S.deepestRegion=6;
@@ -660,7 +660,8 @@ function makeItem(fl,minR){
   let rI=rollRarity();
   if(minR&&rI<minR) rI=minR+(Math.random()<0.3&&minR<3?1:0);
   const slot=choice(SLOTS)[0], R=RARITY[rI];
-  const it={slot,r:rI,name:choice(PFX[rI])+choice(NAMES[slot])+choice(EPITHET[rI]),lv:fl,atk:0,crit:0,critd:0,gold:0,hp:0,def:0,plus:0};
+  const bn=choice(NAMES[slot]);
+  const it={slot,r:rI,bn,name:choice(PFX[rI])+bn+choice(EPITHET[rI]),lv:fl,atk:0,crit:0,critd:0,gold:0,hp:0,def:0,plus:0};
   if(rI>=2) it.flavor=choice(FLAVOR[rI]);
   if(rI===3||rI===4) it.serial='No.'+(1000+Math.floor(Math.random()*9000));
   if(slot==='weapon'||slot==='armor'||slot==='ring'||slot==='amulet') it.el=choice(EL_KEYS.filter(k=>k!=='ice'));
@@ -715,8 +716,10 @@ function itemStats(it){
   if(it.gold) p.push('獲得金 <b>+'+it.gold+'%</b>');
   return p.join(' / ');
 }
+function markDex(it){ if(it&&it.slot&&it.bn){ S.dex=S.dex||{}; (S.dex[it.slot]=S.dex[it.slot]||{})[it.bn]=1; } }
 function dropItem(forced){
   const it=forced||makeItem(S.floor), R=RARITY[it.r];
+  markDex(it);
   S.itemsFound++;
   if(it.flavor) log(R.n+'「'+it.name+'」— '+it.flavor,'drop');
   if(S.autoEquip){
@@ -768,7 +771,7 @@ function shopBuy(i){
   if(!it||S.gold<it.price) return;
   if(S.bag.length>=BAG_MAX){ log('バックログが満杯だ','warn'); return; }
   S.gold-=it.price;
-  S.bag.push(it); S.itemsFound++;
+  S.bag.push(it); S.itemsFound++; markDex(it);
   shopStock[i]=null;
   S.shopStockArr=shopStock.slice();
   log('商店で '+it.name+' を購入（-'+fmt(it.price)+'G）','gold');
@@ -2529,26 +2532,22 @@ function renderTab(){
       +rec('攻略ステージ',S.deepestRegion+' / 6')
       +'</div>'
       +(function(){
-        let h='<div class="secTitle" style="margin-top:14px">ボス再戦（報酬なし）</div>';
-        let any=false;
-        for(let r=1;r<=6;r++){
-          if(!S.bossCleared||!S.bossCleared[r]) continue;
-          const rg=REG(r); if(!rg||!rg.boss) continue;
-          const M=MOBS[rg.boss]; any=true;
-          h+='<button class="rebirthBtn" data-bossr="'+r+'" style="margin:6px 0;padding:10px 14px;font-size:13px">⚔ ステージ'+r+'「'+rg.name+'」 '+M.name+' に再戦</button>';
+        const SEC=[['weapon','武器'],['armor','防具'],['ring','指輪'],['amulet','護符']];
+        let ownT=0,totT=0,h='<div class="secTitle" style="margin-top:14px">装備図鑑</div>';
+        for(const [k,n] of SEC){
+          const seen=(S.dex&&S.dex[k])||{}, names=NAMES[k];
+          const got=names.filter(x=>seen[x]).length; ownT+=got; totT+=names.length;
+          h+='<details style="margin-top:6px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:8px 12px"><summary style="cursor:pointer;color:#ffd166;font-weight:700;font-size:12px">'+n+'（'+got+' / '+names.length+'）</summary>'
+            +'<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">'
+            +names.map(nm=>'<span style="font-size:11px;padding:2px 7px;border:1px solid var(--line);border-radius:3px;'+(seen[nm]?'color:var(--ink);background:rgba(255,209,102,.08)':'color:#4a4f5c')+'">'+nm+'</span>').join('')
+            +'</div></details>';
         }
-        if(!any) h+='<div style="font-size:11px;color:var(--ink-faint)">討伐済みのボスはまだいません</div>';
+        h+='<div style="font-size:10px;color:var(--ink-faint);margin-top:4px">入手したことのある装備: '+ownT+' / '+totT+' 種（グレーは未入手）</div>';
         return h;
       })()
       +'<details style="margin-top:10px;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:8px 12px"><summary style="cursor:pointer;color:#ffd166;font-weight:700;font-size:12px">ヘルプ（遊び方）</summary>'+HELP_HTML+'</details>'
       +'<button class="dangerBtn" id="wipeBtn">セーブデータを削除する</button>';
     $('#wipeBtn').addEventListener('click',askWipe);
-    tabContent.querySelectorAll('[data-bossr]').forEach(b=>b.addEventListener('click',()=>{
-      const r=+b.dataset.bossr;
-      S.__replayBoss=true;
-      if(S.region!==r){ gotoRegion(r); setTimeout(()=>{ if(S.region===r){ S.floor=(r-1)*10+9; startBossReplay(); } },50); }
-      else { S.floor=(r-1)*10+9; startBossReplay(); }
-    }));
   }
 }
 function rec(l,v){ return '<div class="recCell"><span>'+l+'</span><b>'+v+'</b></div>'; }
